@@ -38,17 +38,32 @@ while [ "$#" -gt 0 ]; do
     esac
 done
 
-for command_name in git rustup sha256sum install mktemp; do
+for command_name in git rustup rustc cargo sha256sum install mktemp; do
     command -v "$command_name" >/dev/null 2>&1 || {
         printf 'required command not found: %s\n' "$command_name" >&2
         exit 1
     }
 done
 
-rustup run "$toolchain" rustc --version >/dev/null 2>&1 || {
-    printf 'Rust toolchain %s is required but not installed.\n' "$toolchain" >&2
-    printf 'Install it explicitly with: rustup toolchain install %s --profile minimal\n' "$toolchain" >&2
-    exit 1
+use_rustup=1
+if ! rustup run "$toolchain" rustc --version >/dev/null 2>&1; then
+    current_rustc=$(rustc --version)
+    case "$current_rustc" in
+        "rustc $toolchain "*) use_rustup=0 ;;
+        *)
+            printf 'Rust %s is required but neither that rustup toolchain nor the active default matches.\n' "$toolchain" >&2
+            printf 'Install it explicitly with: rustup toolchain install %s --profile minimal\n' "$toolchain" >&2
+            exit 1
+            ;;
+    esac
+fi
+
+run_rust() {
+    if [ "$use_rustup" -eq 1 ]; then
+        rustup run "$toolchain" "$@"
+    else
+        "$@"
+    fi
 }
 
 work=$(mktemp -d "${TMPDIR:-/tmp}/gqodb-install.XXXXXX")
@@ -62,8 +77,8 @@ git -C "$source_dir" checkout --quiet --detach FETCH_HEAD
 commit=$(git -C "$source_dir" rev-parse HEAD)
 
 printf 'Testing commit %s with Rust %s\n' "$commit" "$toolchain"
-(cd "$source_dir" && rustup run "$toolchain" cargo test --workspace --all-targets --locked)
-(cd "$source_dir" && rustup run "$toolchain" cargo build --workspace --bins --release --locked)
+(cd "$source_dir" && run_rust cargo test --workspace --all-targets --locked)
+(cd "$source_dir" && run_rust cargo build --workspace --bins --release --locked)
 
 bin_dir=$prefix/bin
 share_dir=$prefix/share/gqodb
@@ -86,8 +101,8 @@ receipt=$share_dir/install-receipt.txt
     printf 'repository=%s\n' "$repo"
     printf 'requested_ref=%s\n' "$ref"
     printf 'commit=%s\n' "$commit"
-    printf 'rustc=%s\n' "$(rustup run "$toolchain" rustc --version)"
-    printf 'cargo=%s\n' "$(rustup run "$toolchain" cargo --version)"
+    printf 'rustc=%s\n' "$(run_rust rustc --version)"
+    printf 'cargo=%s\n' "$(run_rust cargo --version)"
     sha256sum "$bin_dir/gqodb-codec" "$bin_dir/ob_store"
 } > "$receipt"
 chmod 0644 "$receipt"
