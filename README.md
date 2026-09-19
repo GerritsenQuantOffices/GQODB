@@ -109,11 +109,25 @@ To build, test and install the two open command-line tools from a clean checkout
 ./install.sh --prefix "$HOME/.local"
 ```
 
-The installer requires Git and Rustup with Rust 1.96.0 already installed. It
-installs `gqodb-codec` and `ob_store`, their licence files and a build receipt.
+On Debian/Ubuntu, the installer detects missing Git, curl, certificates and build
+tools and asks before installing the needed packages with `apt-get` and sudo.
+If Rust 1.96.0 is missing, a separate `[y/N]` question offers to install it with
+Rustup for your user. An existing matching active Rust toolchain is reused.
+Answering `n`, pressing Enter or reaching end-of-input stops that installation;
+`--force` only controls replacing GQODB binaries and does not approve prerequisites.
+Other Linux distributions need their system packages installed manually first.
+It installs `gqodb-codec` and `ob_store`, their licence files and a build receipt.
 Existing binaries are refused unless `--force` is supplied. Use `--ref COMMIT`
 to select an exact source revision; `./install.sh --help` lists the options.
 This is a source installer, not a signed binary release.
+
+Without an existing checkout, first download the script (using curl or a browser),
+then run it so the confirmation questions can read your answers:
+
+```sh
+curl -fsSLo install-gqodb.sh https://raw.githubusercontent.com/GerritsenQuantOffices/GQODB/main/install.sh
+sh install-gqodb.sh
+```
 
 For a manual build and direct file checks:
 
