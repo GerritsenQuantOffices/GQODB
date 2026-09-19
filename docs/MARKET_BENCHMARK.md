@@ -4,6 +4,8 @@
 
 Build `cargo build --release --locked --example market_benchmark`.
 
+For Zstd-compressed Parquet inputs, add `-p gqodb-blocks --features zstd-input`.
+
 ```text
 market_benchmark trades SOURCE.parquet OUTPUT.json ROWS BATCH_ROWS REPS ROW_GROUP START_BATCH
 market_benchmark book SOURCE.jsonl.gz OUTPUT.json ROWS BATCH_ROWS REPS 0 0
@@ -59,9 +61,11 @@ same independent block boundaries and exact source values. The encoder is
 Parquet 59.3.0, Parquet V2, page statistics enabled. gqodb has no comparable
 query statistics/index; these are block formats with different query features.
 
-Original Zstd Parquet files are read with the existing Rust-only adapter outside
-timing. **Zstd encoding is not a controlled baseline here**; the adapter only
-decodes. Results cannot be generalized to every Parquet codec/configuration.
+The historical runs read original Zstd Parquet files through a Rust-only adapter
+outside timing. The public runner instead uses the optional `zstd-input` feature,
+which links the native Zstd library to decode those inputs. The default build
+does not include it. **Zstd encoding is not a controlled baseline here**.
+Results cannot be generalized to every Parquet codec/configuration.
 Gzip ingestion uses flate2's Rust backend (miniz_oxide), not a C library.
 
 ## Host and source version

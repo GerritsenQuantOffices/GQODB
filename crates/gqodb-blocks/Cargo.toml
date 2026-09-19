@@ -41,6 +41,9 @@ path = "prototype/src/main.rs"
 name = "inspect"
 path = "prototype/examples/inspect.rs"
 
+[[example]]
+name = "market_benchmark"
+path = "prototype/examples/market_benchmark.rs"
 
 [[example]]
 name = "paired_benchmark"

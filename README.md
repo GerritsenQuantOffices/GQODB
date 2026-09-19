@@ -8,7 +8,7 @@
 
 <img src="docs/assets/badge-status.svg" alt="status: prototype">
 <img src="docs/assets/badge-licence.svg" alt="licence: Apache-2.0">
-<img src="docs/assets/badge-tests.svg" alt="tests: 46 passed, 0 failed">
+<img src="docs/assets/badge-tests.svg" alt="tests: 47 passed, 0 failed">
 <img src="docs/assets/badge-evidence.svg" alt="evidence: 18 receipted files">
 
 [Build](#build-it) · [Formats](#formats) · [Benchmarks](#benchmarks) ·
@@ -86,7 +86,7 @@ recomputes every published number from them.
 
 <div align="center">
 
-| 4 | 46 | 18 | 0 |
+| 4 | 47 | 18 | 0 |
 |:---:|:---:|:---:|:---:|
 | crates | tests passed, 0 failed | receipted result files | published releases |
 
@@ -102,6 +102,20 @@ recomputes every published number from them.
 > your own.
 
 ## Build it
+
+To build, test and install the two open command-line tools from a clean checkout:
+
+```sh
+./install.sh --prefix "$HOME/.local"
+```
+
+The installer requires Git and Rustup with Rust 1.96.0 already installed. It
+installs `gqodb-codec` and `ob_store`, their licence files and a build receipt.
+Existing binaries are refused unless `--force` is supplied. Use `--ref COMMIT`
+to select an exact source revision; `./install.sh --help` lists the options.
+This is a source installer, not a signed binary release.
+
+For a manual build and direct file checks:
 
 ```sh
 cargo build --workspace --bins --release --locked
@@ -146,6 +160,11 @@ and the [order-book profile](crates/gqodb-codec/src/orderbook/README.md).
 
 Historical runs on fixed datasets and configurations, one host, warm caches. Every
 figure below is recomputed from the stored JSON by `results/verify_public_evidence.py`.
+
+The [benchmark inventory](benchmarks/README.md) maps each run to its runner,
+protocol and input requirements. Use `./benchmarks/run.sh verify` to check the
+published evidence, or `./benchmarks/run.sh synthetic-smoke` from a clean committed
+checkout for a small synthetic check. Neither command downloads market data.
 
 ### Trades — GQODB wins every axis (B06)
 
