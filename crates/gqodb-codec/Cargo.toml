@@ -1,0 +1,27 @@
+[package]
+name = "gqodb-codec"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+repository.workspace = true
+[dependencies]
+anyhow = "1"
+arrow-array = "=59.3.0"
+arrow-schema = { version = "=59.3.0", features = ["serde"] }
+bytes = "1"
+crc32fast = "1.5"
+gqodb-blocks = { path = "../gqodb-blocks" }
+gqodb-store = { path = "../gqodb-store" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+[lib]
+path = "prototype/src/lib.rs"
+[[bin]]
+name = "gqodb-codec"
+path = "prototype/src/main.rs"
+[[test]]
+name = "codec"
+path = "prototype/tests/codec.rs"

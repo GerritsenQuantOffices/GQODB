@@ -1,0 +1,122 @@
+{
+  "experiment": "B12",
+  "warmup_excluded": true,
+  "measured_repetitions": 6,
+  "median_definition": "average of central two observations",
+  "summary": [
+    {
+      "mode": "Gqodb",
+      "bytes": 3703770,
+      "write_sync_ns": 259264426,
+      "read_ns": 170004248,
+      "queries": [
+        {
+          "name": "window-25-10ms",
+          "rows": 1268,
+          "blocks": 2,
+          "median_ns": 9185146
+        },
+        {
+          "name": "window-50-10ms",
+          "rows": 266,
+          "blocks": 2,
+          "median_ns": 7857634.5
+        },
+        {
+          "name": "window-75-10ms",
+          "rows": 57,
+          "blocks": 2,
+          "median_ns": 7868721.5
+        },
+        {
+          "name": "full-symbol",
+          "rows": 333852,
+          "blocks": 32,
+          "median_ns": 146920392
+        },
+        {
+          "name": "absent-symbol",
+          "rows": 0,
+          "blocks": 0,
+          "median_ns": 109294.5
+        }
+      ]
+    },
+    {
+      "mode": "DictionaryLz4",
+      "bytes": 5950242,
+      "write_sync_ns": 362784592.5,
+      "read_ns": 93172848,
+      "queries": [
+        {
+          "name": "window-25-10ms",
+          "rows": 1268,
+          "blocks": 2,
+          "median_ns": 6052471.5
+        },
+        {
+          "name": "window-50-10ms",
+          "rows": 266,
+          "blocks": 2,
+          "median_ns": 2929069
+        },
+        {
+          "name": "window-75-10ms",
+          "rows": 57,
+          "blocks": 2,
+          "median_ns": 2910877
+        },
+        {
+          "name": "full-symbol",
+          "rows": 333852,
+          "blocks": 32,
+          "median_ns": 121773797.5
+        },
+        {
+          "name": "absent-symbol",
+          "rows": 0,
+          "blocks": 0,
+          "median_ns": 369334.5
+        }
+      ]
+    },
+    {
+      "mode": "DeltaLz4",
+      "bytes": 9242314,
+      "write_sync_ns": 245577059,
+      "read_ns": 107390946.5,
+      "queries": [
+        {
+          "name": "window-25-10ms",
+          "rows": 1268,
+          "blocks": 2,
+          "median_ns": 7055839
+        },
+        {
+          "name": "window-50-10ms",
+          "rows": 266,
+          "blocks": 2,
+          "median_ns": 3979621.5
+        },
+        {
+          "name": "window-75-10ms",
+          "rows": 57,
+          "blocks": 2,
+          "median_ns": 3991724.5
+        },
+        {
+          "name": "full-symbol",
+          "rows": 333852,
+          "blocks": 32,
+          "median_ns": 139858188.5
+        },
+        {
+          "name": "absent-symbol",
+          "rows": 0,
+          "blocks": 0,
+          "median_ns": 353425
+        }
+      ]
+    }
+  ]
+}

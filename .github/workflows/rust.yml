@@ -1,0 +1,24 @@
+name: Rust checks
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install tested Rust toolchain
+        run: rustup toolchain install 1.96.0 --profile minimal --component rustfmt --component clippy
+      - name: Format
+        run: cargo +1.96.0 fmt --all --check
+      - name: Lint
+        run: cargo +1.96.0 clippy --workspace --all-targets --locked -- -D warnings
+      - name: Test (pure Rust default)
+        run: cargo +1.96.0 test --workspace --all-targets --locked
+      - name: Test with zstd Parquet input
+        run: cargo +1.96.0 test -p gqodb-blocks --features zstd-input --all-targets --locked
+      - name: Build release binaries
+        run: cargo +1.96.0 build --workspace --bins --release --locked
+      - name: Verify benchmark evidence against its receipts
+        run: python3 results/verify_public_evidence.py

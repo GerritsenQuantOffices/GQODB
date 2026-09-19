@@ -1,0 +1,944 @@
+{
+  "experiment": "B15",
+  "median_definition": "average of central two of six measured rounds; warmup excluded",
+  "summary": [
+    {
+      "variant": "old",
+      "pair": 0,
+      "profiles": [
+        {
+          "decode_ns": 87115106,
+          "decoded_index_check_ns": 8665302,
+          "frame_and_metadata_ns": 1341898
+        },
+        {
+          "decode_ns": 85817832,
+          "decoded_index_check_ns": 8690188,
+          "frame_and_metadata_ns": 1271720
+        },
+        {
+          "decode_ns": 85811326,
+          "decoded_index_check_ns": 8590937,
+          "frame_and_metadata_ns": 1278929
+        }
+      ],
+      "memory": [
+        "VmHWM:\t  503148 kB"
+      ],
+      "modes": [
+        {
+          "mode": "Gqodb",
+          "bytes": 3703770,
+          "read_ns": 47398474,
+          "queries": [
+            {
+              "name": "window-25-10ms",
+              "rows": 1268,
+              "blocks": 2,
+              "ns": 3170866.5
+            },
+            {
+              "name": "window-50-10ms",
+              "rows": 266,
+              "blocks": 2,
+              "ns": 2978198.5
+            },
+            {
+              "name": "window-75-10ms",
+              "rows": 57,
+              "blocks": 2,
+              "ns": 2949792
+            },
+            {
+              "name": "full-symbol",
+              "rows": 333852,
+              "blocks": 32,
+              "ns": 65084321.5
+            },
+            {
+              "name": "absent-symbol",
+              "rows": 0,
+              "blocks": 0,
+              "ns": 107723
+            }
+          ]
+        },
+        {
+          "mode": "DictionaryLz4",
+          "bytes": 5950242,
+          "read_ns": 41311132.5,
+          "queries": [
+            {
+              "name": "window-25-10ms",
+              "rows": 1268,
+              "blocks": 2,
+              "ns": 3230682.5
+            },
+            {
+              "name": "window-50-10ms",
+              "rows": 266,
+              "blocks": 2,
+              "ns": 2907941.5
+            },
+            {
+              "name": "window-75-10ms",
+              "rows": 57,
+              "blocks": 2,
+              "ns": 2888770
+            },
+            {
+              "name": "full-symbol",
+              "rows": 333852,
+              "blocks": 32,
+              "ns": 114301486
+            },
+            {
+              "name": "absent-symbol",
+              "rows": 0,
+              "blocks": 0,
+              "ns": 368947.5
+            }
+          ]
+        },
+        {
+          "mode": "DeltaLz4",
+          "bytes": 9242314,
+          "read_ns": 56143334,
+          "queries": [
+            {
+              "name": "window-25-10ms",
+              "rows": 1268,
+              "blocks": 2,
+              "ns": 4161518.5
+            },
+            {
+              "name": "window-50-10ms",
+              "rows": 266,
+              "blocks": 2,
+              "ns": 3928112
+            },
+            {
+              "name": "window-75-10ms",
+              "rows": 57,
+              "blocks": 2,
+              "ns": 3931099
+            },
+            {
+              "name": "full-symbol",
+              "rows": 333852,
+              "blocks": 32,
+              "ns": 128609718.5
+            },
+            {
+              "name": "absent-symbol",
+              "rows": 0,
+              "blocks": 0,
+              "ns": 351187.5
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "variant": "old",
+      "pair": 1,
+      "profiles": [
+        {
+          "decode_ns": 86923632,
+          "decoded_index_check_ns": 8626178,
+          "frame_and_metadata_ns": 1299473
+        },
+        {
+          "decode_ns": 86786867,
+          "decoded_index_check_ns": 8611154,
+          "frame_and_metadata_ns": 1281883
+        },
+        {
+          "decode_ns": 86582251,
+          "decoded_index_check_ns": 8657084,
+          "frame_and_metadata_ns": 1299190
+        }
+      ],
+      "memory": [
+        "VmHWM:\t  503044 kB"
+      ],
+      "modes": [
+        {
+          "mode": "Gqodb",
+          "bytes": 3703770,
+          "read_ns": 47489794.5,
+          "queries": [
+            {
+              "name": "window-25-10ms",
+              "rows": 1268,
+              "blocks": 2,
+              "ns": 3184705
+            },
+            {
+              "name": "window-50-10ms",
+              "rows": 266,
+              "blocks": 2,
+              "ns": 2981202.5
+            },
+            {
+              "name": "window-75-10ms",
+              "rows": 57,
+              "blocks": 2,
+              "ns": 2947803.5
+            },
+            {
+              "name": "full-symbol",
+              "rows": 333852,
+              "blocks": 32,
+              "ns": 65172935
+            },
+            {
+              "name": "absent-symbol",
+              "rows": 0,
+              "blocks": 0,
+              "ns": 110897.5
+            }
+          ]
+        },
+        {
+          "mode": "DictionaryLz4",
+          "bytes": 5950242,
+          "read_ns": 41636443,
+          "queries": [
+            {
+              "name": "window-25-10ms",
+              "rows": 1268,
+              "blocks": 2,
+              "ns": 3236599.5
+            },
+            {
+              "name": "window-50-10ms",
+              "rows": 266,
+              "blocks": 2,
+              "ns": 2923299.5
+            },
+            {
+              "name": "window-75-10ms",
+              "rows": 57,
+              "blocks": 2,
+              "ns": 2898552.5
+            },
+            {
+              "name": "full-symbol",
+              "rows": 333852,
+              "blocks": 32,
+              "ns": 114605282.5
+            },
+            {
+              "name": "absent-symbol",
+              "rows": 0,
+              "blocks": 0,
+              "ns": 375164.5
+            }
+          ]
+        },
+        {
+          "mode": "DeltaLz4",
+          "bytes": 9242314,
+          "read_ns": 56341156,
+          "queries": [
+            {
+              "name": "window-25-10ms",
+              "rows": 1268,
+              "blocks": 2,
+              "ns": 4180067.5
+            },
+            {
+              "name": "window-50-10ms",
+              "rows": 266,
+              "blocks": 2,
+              "ns": 3938706
+            },
+            {
+              "name": "window-75-10ms",
+              "rows": 57,
+              "blocks": 2,
+              "ns": 3957782
+            },
+            {
+              "name": "full-symbol",
+              "rows": 333852,
+              "blocks": 32,
+              "ns": 129670167
+            },
+            {
+              "name": "absent-symbol",
+              "rows": 0,
+              "blocks": 0,
+              "ns": 347600.5
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "variant": "old",
+      "pair": 2,
+      "profiles": [
+        {
+          "decode_ns": 86899740,
+          "decoded_index_check_ns": 8635693,
+          "frame_and_metadata_ns": 1283015
+        },
+        {
+          "decode_ns": 87036729,
+          "decoded_index_check_ns": 8659847,
+          "frame_and_metadata_ns": 1285424
+        },
+        {
+          "decode_ns": 86909141,
+          "decoded_index_check_ns": 8624690,
+          "frame_and_metadata_ns": 1275336
+        }
+      ],
+      "memory": [
+        "VmHWM:\t  503268 kB"
+      ],
+      "modes": [
+        {
+          "mode": "Gqodb",
+          "bytes": 3703770,
+          "read_ns": 47429843,
+          "queries": [
+            {
+              "name": "window-25-10ms",
+              "rows": 1268,
+              "blocks": 2,
+              "ns": 3183146.5
+            },
+            {
+              "name": "window-50-10ms",
+              "rows": 266,
+              "blocks": 2,
+              "ns": 2980057
+            },
+            {
+              "name": "window-75-10ms",
+              "rows": 57,
+              "blocks": 2,
+              "ns": 2951109
+            },
+            {
+              "name": "full-symbol",
+              "rows": 333852,
+              "blocks": 32,
+              "ns": 65117140
+            },
+            {
+              "name": "absent-symbol",
+              "rows": 0,
+              "blocks": 0,
+              "ns": 109817.5
+            }
+          ]
+        },
+        {
+          "mode": "DictionaryLz4",
+          "bytes": 5950242,
+          "read_ns": 41488913.5,
+          "queries": [
+            {
+              "name": "window-25-10ms",
+              "rows": 1268,
+              "blocks": 2,
+              "ns": 4275828
+            },
+            {
+              "name": "window-50-10ms",
+              "rows": 266,
+              "blocks": 2,
+              "ns": 2901953
+            },
+            {
+              "name": "window-75-10ms",
+              "rows": 57,
+              "blocks": 2,
+              "ns": 2890985.5
+            },
+            {
+              "name": "full-symbol",
+              "rows": 333852,
+              "blocks": 32,
+              "ns": 118361268
+            },
+            {
+              "name": "absent-symbol",
+              "rows": 0,
+              "blocks": 0,
+              "ns": 371656
+            }
+          ]
+        },
+        {
+          "mode": "DeltaLz4",
+          "bytes": 9242314,
+          "read_ns": 56293034,
+          "queries": [
+            {
+              "name": "window-25-10ms",
+              "rows": 1268,
+              "blocks": 2,
+              "ns": 4159982
+            },
+            {
+              "name": "window-50-10ms",
+              "rows": 266,
+              "blocks": 2,
+              "ns": 3928429.5
+            },
+            {
+              "name": "window-75-10ms",
+              "rows": 57,
+              "blocks": 2,
+              "ns": 3934734
+            },
+            {
+              "name": "full-symbol",
+              "rows": 333852,
+              "blocks": 32,
+              "ns": 129443653.5
+            },
+            {
+              "name": "absent-symbol",
+              "rows": 0,
+              "blocks": 0,
+              "ns": 349262
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "variant": "new",
+      "pair": 0,
+      "profiles": [
+        {
+          "decode_ns": 74455369,
+          "decoded_index_check_ns": 8229286,
+          "frame_and_metadata_ns": 1281763
+        },
+        {
+          "decode_ns": 74211590,
+          "decoded_index_check_ns": 8246332,
+          "frame_and_metadata_ns": 1274545
+        },
+        {
+          "decode_ns": 74170158,
+          "decoded_index_check_ns": 8220058,
+          "frame_and_metadata_ns": 1280104
+        }
+      ],
+      "memory": [
+        "VmHWM:\t  503108 kB"
+      ],
+      "modes": [
+        {
+          "mode": "Gqodb",
+          "bytes": 3703770,
+          "read_ns": 39431677.5,
+          "queries": [
+            {
+              "name": "window-25-10ms",
+              "rows": 1268,
+              "blocks": 2,
+              "ns": 2664739.5
+            },
+            {
+              "name": "window-50-10ms",
+              "rows": 266,
+              "blocks": 2,
+              "ns": 2475153
+            },
+            {
+              "name": "window-75-10ms",
+              "rows": 57,
+              "blocks": 2,
+              "ns": 2464747
+            },
+            {
+              "name": "full-symbol",
+              "rows": 333852,
+              "blocks": 32,
+              "ns": 59198242.5
+            },
+            {
+              "name": "absent-symbol",
+              "rows": 0,
+              "blocks": 0,
+              "ns": 109623
+            }
+          ]
+        },
+        {
+          "mode": "DictionaryLz4",
+          "bytes": 5950242,
+          "read_ns": 41736382.5,
+          "queries": [
+            {
+              "name": "window-25-10ms",
+              "rows": 1268,
+              "blocks": 2,
+              "ns": 3276763
+            },
+            {
+              "name": "window-50-10ms",
+              "rows": 266,
+              "blocks": 2,
+              "ns": 2937789
+            },
+            {
+              "name": "window-75-10ms",
+              "rows": 57,
+              "blocks": 2,
+              "ns": 2924143.5
+            },
+            {
+              "name": "full-symbol",
+              "rows": 333852,
+              "blocks": 32,
+              "ns": 112348087
+            },
+            {
+              "name": "absent-symbol",
+              "rows": 0,
+              "blocks": 0,
+              "ns": 370118
+            }
+          ]
+        },
+        {
+          "mode": "DeltaLz4",
+          "bytes": 9242314,
+          "read_ns": 56373303.5,
+          "queries": [
+            {
+              "name": "window-25-10ms",
+              "rows": 1268,
+              "blocks": 2,
+              "ns": 4507822
+            },
+            {
+              "name": "window-50-10ms",
+              "rows": 266,
+              "blocks": 2,
+              "ns": 3951662.5
+            },
+            {
+              "name": "window-75-10ms",
+              "rows": 57,
+              "blocks": 2,
+              "ns": 3967690.5
+            },
+            {
+              "name": "full-symbol",
+              "rows": 333852,
+              "blocks": 32,
+              "ns": 136630089.5
+            },
+            {
+              "name": "absent-symbol",
+              "rows": 0,
+              "blocks": 0,
+              "ns": 353391
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "variant": "new",
+      "pair": 1,
+      "profiles": [
+        {
+          "decode_ns": 74807856,
+          "decoded_index_check_ns": 8203790,
+          "frame_and_metadata_ns": 1267826
+        },
+        {
+          "decode_ns": 74810313,
+          "decoded_index_check_ns": 8235586,
+          "frame_and_metadata_ns": 1264875
+        },
+        {
+          "decode_ns": 74542512,
+          "decoded_index_check_ns": 8233230,
+          "frame_and_metadata_ns": 1253239
+        }
+      ],
+      "memory": [
+        "VmHWM:\t  503184 kB"
+      ],
+      "modes": [
+        {
+          "mode": "Gqodb",
+          "bytes": 3703770,
+          "read_ns": 39362403,
+          "queries": [
+            {
+              "name": "window-25-10ms",
+              "rows": 1268,
+              "blocks": 2,
+              "ns": 2690111
+            },
+            {
+              "name": "window-50-10ms",
+              "rows": 266,
+              "blocks": 2,
+              "ns": 2476795.5
+            },
+            {
+              "name": "window-75-10ms",
+              "rows": 57,
+              "blocks": 2,
+              "ns": 2456603
+            },
+            {
+              "name": "full-symbol",
+              "rows": 333852,
+              "blocks": 32,
+              "ns": 54427619.5
+            },
+            {
+              "name": "absent-symbol",
+              "rows": 0,
+              "blocks": 0,
+              "ns": 112073
+            }
+          ]
+        },
+        {
+          "mode": "DictionaryLz4",
+          "bytes": 5950242,
+          "read_ns": 41790424.5,
+          "queries": [
+            {
+              "name": "window-25-10ms",
+              "rows": 1268,
+              "blocks": 2,
+              "ns": 3264354.5
+            },
+            {
+              "name": "window-50-10ms",
+              "rows": 266,
+              "blocks": 2,
+              "ns": 2928196
+            },
+            {
+              "name": "window-75-10ms",
+              "rows": 57,
+              "blocks": 2,
+              "ns": 2912591.5
+            },
+            {
+              "name": "full-symbol",
+              "rows": 333852,
+              "blocks": 32,
+              "ns": 112620917.5
+            },
+            {
+              "name": "absent-symbol",
+              "rows": 0,
+              "blocks": 0,
+              "ns": 367151
+            }
+          ]
+        },
+        {
+          "mode": "DeltaLz4",
+          "bytes": 9242314,
+          "read_ns": 56593799,
+          "queries": [
+            {
+              "name": "window-25-10ms",
+              "rows": 1268,
+              "blocks": 2,
+              "ns": 4177603
+            },
+            {
+              "name": "window-50-10ms",
+              "rows": 266,
+              "blocks": 2,
+              "ns": 3966243.5
+            },
+            {
+              "name": "window-75-10ms",
+              "rows": 57,
+              "blocks": 2,
+              "ns": 3943563
+            },
+            {
+              "name": "full-symbol",
+              "rows": 333852,
+              "blocks": 32,
+              "ns": 127828797.5
+            },
+            {
+              "name": "absent-symbol",
+              "rows": 0,
+              "blocks": 0,
+              "ns": 347140
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "variant": "new",
+      "pair": 2,
+      "profiles": [
+        {
+          "decode_ns": 74575344,
+          "decoded_index_check_ns": 8219118,
+          "frame_and_metadata_ns": 1278139
+        },
+        {
+          "decode_ns": 75536396,
+          "decoded_index_check_ns": 8256572,
+          "frame_and_metadata_ns": 1311527
+        },
+        {
+          "decode_ns": 74439995,
+          "decoded_index_check_ns": 8254953,
+          "frame_and_metadata_ns": 1279766
+        }
+      ],
+      "memory": [
+        "VmHWM:\t  503208 kB"
+      ],
+      "modes": [
+        {
+          "mode": "Gqodb",
+          "bytes": 3703770,
+          "read_ns": 39419815.5,
+          "queries": [
+            {
+              "name": "window-25-10ms",
+              "rows": 1268,
+              "blocks": 2,
+              "ns": 2599391
+            },
+            {
+              "name": "window-50-10ms",
+              "rows": 266,
+              "blocks": 2,
+              "ns": 2479240
+            },
+            {
+              "name": "window-75-10ms",
+              "rows": 57,
+              "blocks": 2,
+              "ns": 2443075.5
+            },
+            {
+              "name": "full-symbol",
+              "rows": 333852,
+              "blocks": 32,
+              "ns": 64007310.5
+            },
+            {
+              "name": "absent-symbol",
+              "rows": 0,
+              "blocks": 0,
+              "ns": 108471
+            }
+          ]
+        },
+        {
+          "mode": "DictionaryLz4",
+          "bytes": 5950242,
+          "read_ns": 41678454,
+          "queries": [
+            {
+              "name": "window-25-10ms",
+              "rows": 1268,
+              "blocks": 2,
+              "ns": 3571228
+            },
+            {
+              "name": "window-50-10ms",
+              "rows": 266,
+              "blocks": 2,
+              "ns": 2923313.5
+            },
+            {
+              "name": "window-75-10ms",
+              "rows": 57,
+              "blocks": 2,
+              "ns": 2928840
+            },
+            {
+              "name": "full-symbol",
+              "rows": 333852,
+              "blocks": 32,
+              "ns": 121794525
+            },
+            {
+              "name": "absent-symbol",
+              "rows": 0,
+              "blocks": 0,
+              "ns": 365609.5
+            }
+          ]
+        },
+        {
+          "mode": "DeltaLz4",
+          "bytes": 9242314,
+          "read_ns": 56353547.5,
+          "queries": [
+            {
+              "name": "window-25-10ms",
+              "rows": 1268,
+              "blocks": 2,
+              "ns": 4322145.5
+            },
+            {
+              "name": "window-50-10ms",
+              "rows": 266,
+              "blocks": 2,
+              "ns": 3963381
+            },
+            {
+              "name": "window-75-10ms",
+              "rows": 57,
+              "blocks": 2,
+              "ns": 3935576
+            },
+            {
+              "name": "full-symbol",
+              "rows": 333852,
+              "blocks": 32,
+              "ns": 131981186
+            },
+            {
+              "name": "absent-symbol",
+              "rows": 0,
+              "blocks": 0,
+              "ns": 350168.5
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "integrated": [
+    {
+      "mode": "Gqodb",
+      "bytes": 3703770,
+      "write_sync_ns": 198361739.5,
+      "read_ns": 39972222,
+      "queries": [
+        {
+          "name": "window-25-10ms",
+          "rows": 1268,
+          "blocks": 2,
+          "ns": 2602381.5
+        },
+        {
+          "name": "window-50-10ms",
+          "rows": 266,
+          "blocks": 2,
+          "ns": 2545576
+        },
+        {
+          "name": "window-75-10ms",
+          "rows": 57,
+          "blocks": 2,
+          "ns": 2518860.5
+        },
+        {
+          "name": "full-symbol",
+          "rows": 333852,
+          "blocks": 32,
+          "ns": 65446455.5
+        },
+        {
+          "name": "absent-symbol",
+          "rows": 0,
+          "blocks": 0,
+          "ns": 106038.5
+        }
+      ]
+    },
+    {
+      "mode": "DictionaryLz4",
+      "bytes": 5950242,
+      "write_sync_ns": 313210893,
+      "read_ns": 41620334.5,
+      "queries": [
+        {
+          "name": "window-25-10ms",
+          "rows": 1268,
+          "blocks": 2,
+          "ns": 3554221
+        },
+        {
+          "name": "window-50-10ms",
+          "rows": 266,
+          "blocks": 2,
+          "ns": 2950606
+        },
+        {
+          "name": "window-75-10ms",
+          "rows": 57,
+          "blocks": 2,
+          "ns": 2935509
+        },
+        {
+          "name": "full-symbol",
+          "rows": 333852,
+          "blocks": 32,
+          "ns": 124578755
+        },
+        {
+          "name": "absent-symbol",
+          "rows": 0,
+          "blocks": 0,
+          "ns": 369341
+        }
+      ]
+    },
+    {
+      "mode": "DeltaLz4",
+      "bytes": 9242314,
+      "write_sync_ns": 248710885.5,
+      "read_ns": 56811581,
+      "queries": [
+        {
+          "name": "window-25-10ms",
+          "rows": 1268,
+          "blocks": 2,
+          "ns": 4418960
+        },
+        {
+          "name": "window-50-10ms",
+          "rows": 266,
+          "blocks": 2,
+          "ns": 3994403.5
+        },
+        {
+          "name": "window-75-10ms",
+          "rows": 57,
+          "blocks": 2,
+          "ns": 3993342.5
+        },
+        {
+          "name": "full-symbol",
+          "rows": 333852,
+          "blocks": 32,
+          "ns": 140022869.5
+        },
+        {
+          "name": "absent-symbol",
+          "rows": 0,
+          "blocks": 0,
+          "ns": 354232.5
+        }
+      ]
+    }
+  ]
+}

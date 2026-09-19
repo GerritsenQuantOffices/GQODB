@@ -1,0 +1,39 @@
+[package]
+name = "gqodb-store"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Experimental indexed order-book segments and prefix recovery"
+
+[dependencies]
+anyhow = "1"
+arrow-array = "=59.3.0"
+arrow-schema = { version = "=59.3.0", features = ["serde"] }
+arrow-select = "=59.3.0"
+bytes = "1"
+crc32fast = "1.5"
+gqodb-blocks = { path = "../gqodb-blocks" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[dev-dependencies]
+parquet = { version = "=59.3.0", default-features = false, features = ["arrow", "lz4"] }
+sha2 = "0.10"
+
+[lib]
+path = "prototype/src/lib.rs"
+
+[[bin]]
+name = "ob_store"
+path = "prototype/src/bin/ob_store.rs"
+
+[[example]]
+name = "storage_benchmark"
+path = "prototype/examples/storage_benchmark.rs"
+
+[[test]]
+name = "segments"
+path = "prototype/tests/segments.rs"

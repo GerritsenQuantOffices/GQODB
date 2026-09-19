@@ -1,0 +1,918 @@
+{
+  "args": [
+    "artifacts/b13-binaries/baseline",
+    "capture://bybit/raw/full_orderbook_delta/date=2026-09-03/hour=06/bybit_20260903T06_b0b4bde5c08e4ea4a807155035eed826.jsonl.gz",
+    "artifacts/b13-profile",
+    "results/b13/profile-before.json"
+  ],
+  "cache": "warm/page-cache; no cache eviction",
+  "comparison": "Parquet dictionary-LZ4 and delta-LZ4; row-group min/max pruning, no page-level filtering",
+  "diagnostic_profiles": [
+    {
+      "decode_ns": 93360417,
+      "decoded_index_check_ns": 69235648,
+      "frame_and_metadata_ns": 1283807
+    },
+    {
+      "decode_ns": 92678066,
+      "decoded_index_check_ns": 69273757,
+      "frame_and_metadata_ns": 1281802
+    },
+    {
+      "decode_ns": 92647611,
+      "decoded_index_check_ns": 69309669,
+      "frame_and_metadata_ns": 1276549
+    }
+  ],
+  "durability": "file sync_all at end for every codec; directory sync and atomic publication excluded",
+  "experiment": "B13",
+  "measured_rounds": 6,
+  "memory": [
+    "VmHWM:\t  503528 kB"
+  ],
+  "provenance": {
+    "decimal_scale": 100000000,
+    "empty_events_excluded": 0,
+    "events": 7265,
+    "levels": 1048576,
+    "projection": "level rows, event timestamps/IDs/type/symbol; collector envelope and original JSON lexical form excluded; no replay correctness claim"
+  },
+  "queries": [
+    {
+      "end": 1788415331372287959,
+      "name": "window-25-10ms",
+      "start": 1788415331362287959,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "end": 1788415522369373818,
+      "name": "window-50-10ms",
+      "start": 1788415522359373818,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "end": 1788415719653429190,
+      "name": "window-75-10ms",
+      "start": 1788415719643429190,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "end": 9223372036854775807,
+      "name": "full-symbol",
+      "start": -9223372036854775808,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "end": 9223372036854775807,
+      "name": "absent-symbol",
+      "start": -9223372036854775808,
+      "symbol": "ZZZ_NOT_PRESENT"
+    }
+  ],
+  "read_only_files": "artifacts/b12-storage-final",
+  "rows": 1048576,
+  "samples": [
+    {
+      "bytes": 3703770,
+      "mode": "Gqodb",
+      "path": "artifacts/b12-storage-final/gqodb-6.gqodb.ob",
+      "queries": [
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 8733760,
+          "name": "window-25-10ms",
+          "rows": 1268
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 7507299,
+          "name": "window-50-10ms",
+          "rows": 266
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 7465511,
+          "name": "window-75-10ms",
+          "rows": 57
+        },
+        {
+          "blocks_read": 32,
+          "elapsed_ns": 139816272,
+          "name": "full-symbol",
+          "rows": 333852
+        },
+        {
+          "blocks_read": 0,
+          "elapsed_ns": 110322,
+          "name": "absent-symbol",
+          "rows": 0
+        }
+      ],
+      "read_ns": 163558814,
+      "round": 0,
+      "write_sync_ns": 0
+    },
+    {
+      "bytes": 5950242,
+      "mode": "DictionaryLz4",
+      "path": "artifacts/b12-storage-final/parquet-dictionary-lz4-6.parquet",
+      "queries": [
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 3275035,
+          "name": "window-25-10ms",
+          "rows": 1268
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 2937627,
+          "name": "window-50-10ms",
+          "rows": 266
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 2914626,
+          "name": "window-75-10ms",
+          "rows": 57
+        },
+        {
+          "blocks_read": 32,
+          "elapsed_ns": 116292556,
+          "name": "full-symbol",
+          "rows": 333852
+        },
+        {
+          "blocks_read": 0,
+          "elapsed_ns": 366074,
+          "name": "absent-symbol",
+          "rows": 0
+        }
+      ],
+      "read_ns": 42431289,
+      "round": 0,
+      "write_sync_ns": 0
+    },
+    {
+      "bytes": 9242314,
+      "mode": "DeltaLz4",
+      "path": "artifacts/b12-storage-final/parquet-delta-lz4-6.parquet",
+      "queries": [
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 4174665,
+          "name": "window-25-10ms",
+          "rows": 1268
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 3954245,
+          "name": "window-50-10ms",
+          "rows": 266
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 3931549,
+          "name": "window-75-10ms",
+          "rows": 57
+        },
+        {
+          "blocks_read": 32,
+          "elapsed_ns": 130530809,
+          "name": "full-symbol",
+          "rows": 333852
+        },
+        {
+          "blocks_read": 0,
+          "elapsed_ns": 348817,
+          "name": "absent-symbol",
+          "rows": 0
+        }
+      ],
+      "read_ns": 56153697,
+      "round": 0,
+      "write_sync_ns": 0
+    },
+    {
+      "bytes": 9242314,
+      "mode": "DeltaLz4",
+      "path": "artifacts/b12-storage-final/parquet-delta-lz4-6.parquet",
+      "queries": [
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 4169874,
+          "name": "window-25-10ms",
+          "rows": 1268
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 3953453,
+          "name": "window-50-10ms",
+          "rows": 266
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 3954080,
+          "name": "window-75-10ms",
+          "rows": 57
+        },
+        {
+          "blocks_read": 32,
+          "elapsed_ns": 130574304,
+          "name": "full-symbol",
+          "rows": 333852
+        },
+        {
+          "blocks_read": 0,
+          "elapsed_ns": 347593,
+          "name": "absent-symbol",
+          "rows": 0
+        }
+      ],
+      "read_ns": 56174783,
+      "round": 1,
+      "write_sync_ns": 0
+    },
+    {
+      "bytes": 5950242,
+      "mode": "DictionaryLz4",
+      "path": "artifacts/b12-storage-final/parquet-dictionary-lz4-6.parquet",
+      "queries": [
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 3266716,
+          "name": "window-25-10ms",
+          "rows": 1268
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 2940087,
+          "name": "window-50-10ms",
+          "rows": 266
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 2920201,
+          "name": "window-75-10ms",
+          "rows": 57
+        },
+        {
+          "blocks_read": 32,
+          "elapsed_ns": 116323119,
+          "name": "full-symbol",
+          "rows": 333852
+        },
+        {
+          "blocks_read": 0,
+          "elapsed_ns": 380065,
+          "name": "absent-symbol",
+          "rows": 0
+        }
+      ],
+      "read_ns": 41740778,
+      "round": 1,
+      "write_sync_ns": 0
+    },
+    {
+      "bytes": 3703770,
+      "mode": "Gqodb",
+      "path": "artifacts/b12-storage-final/gqodb-6.gqodb.ob",
+      "queries": [
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 8766750,
+          "name": "window-25-10ms",
+          "rows": 1268
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 7494729,
+          "name": "window-50-10ms",
+          "rows": 266
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 7458162,
+          "name": "window-75-10ms",
+          "rows": 57
+        },
+        {
+          "blocks_read": 32,
+          "elapsed_ns": 140005225,
+          "name": "full-symbol",
+          "rows": 333852
+        },
+        {
+          "blocks_read": 0,
+          "elapsed_ns": 124395,
+          "name": "absent-symbol",
+          "rows": 0
+        }
+      ],
+      "read_ns": 136748226,
+      "round": 1,
+      "write_sync_ns": 0
+    },
+    {
+      "bytes": 5950242,
+      "mode": "DictionaryLz4",
+      "path": "artifacts/b12-storage-final/parquet-dictionary-lz4-6.parquet",
+      "queries": [
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 6193119,
+          "name": "window-25-10ms",
+          "rows": 1268
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 2935234,
+          "name": "window-50-10ms",
+          "rows": 266
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 2906951,
+          "name": "window-75-10ms",
+          "rows": 57
+        },
+        {
+          "blocks_read": 32,
+          "elapsed_ns": 122066410,
+          "name": "full-symbol",
+          "rows": 333852
+        },
+        {
+          "blocks_read": 0,
+          "elapsed_ns": 367492,
+          "name": "absent-symbol",
+          "rows": 0
+        }
+      ],
+      "read_ns": 91204735,
+      "round": 2,
+      "write_sync_ns": 0
+    },
+    {
+      "bytes": 9242314,
+      "mode": "DeltaLz4",
+      "path": "artifacts/b12-storage-final/parquet-delta-lz4-6.parquet",
+      "queries": [
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 7145020,
+          "name": "window-25-10ms",
+          "rows": 1268
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 4056559,
+          "name": "window-50-10ms",
+          "rows": 266
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 3996216,
+          "name": "window-75-10ms",
+          "rows": 57
+        },
+        {
+          "blocks_read": 32,
+          "elapsed_ns": 136872575,
+          "name": "full-symbol",
+          "rows": 333852
+        },
+        {
+          "blocks_read": 0,
+          "elapsed_ns": 365255,
+          "name": "absent-symbol",
+          "rows": 0
+        }
+      ],
+      "read_ns": 105586855,
+      "round": 2,
+      "write_sync_ns": 0
+    },
+    {
+      "bytes": 3703770,
+      "mode": "Gqodb",
+      "path": "artifacts/b12-storage-final/gqodb-6.gqodb.ob",
+      "queries": [
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 8766944,
+          "name": "window-25-10ms",
+          "rows": 1268
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 7491527,
+          "name": "window-50-10ms",
+          "rows": 266
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 7462094,
+          "name": "window-75-10ms",
+          "rows": 57
+        },
+        {
+          "blocks_read": 32,
+          "elapsed_ns": 140103060,
+          "name": "full-symbol",
+          "rows": 333852
+        },
+        {
+          "blocks_read": 0,
+          "elapsed_ns": 112183,
+          "name": "absent-symbol",
+          "rows": 0
+        }
+      ],
+      "read_ns": 163612503,
+      "round": 2,
+      "write_sync_ns": 0
+    },
+    {
+      "bytes": 3703770,
+      "mode": "Gqodb",
+      "path": "artifacts/b12-storage-final/gqodb-6.gqodb.ob",
+      "queries": [
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 8764521,
+          "name": "window-25-10ms",
+          "rows": 1268
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 7488673,
+          "name": "window-50-10ms",
+          "rows": 266
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 7475847,
+          "name": "window-75-10ms",
+          "rows": 57
+        },
+        {
+          "blocks_read": 32,
+          "elapsed_ns": 140414900,
+          "name": "full-symbol",
+          "rows": 333852
+        },
+        {
+          "blocks_read": 0,
+          "elapsed_ns": 115753,
+          "name": "absent-symbol",
+          "rows": 0
+        }
+      ],
+      "read_ns": 163629839,
+      "round": 3,
+      "write_sync_ns": 0
+    },
+    {
+      "bytes": 9242314,
+      "mode": "DeltaLz4",
+      "path": "artifacts/b12-storage-final/parquet-delta-lz4-6.parquet",
+      "queries": [
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 7100019,
+          "name": "window-25-10ms",
+          "rows": 1268
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 3946613,
+          "name": "window-50-10ms",
+          "rows": 266
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 3936673,
+          "name": "window-75-10ms",
+          "rows": 57
+        },
+        {
+          "blocks_read": 32,
+          "elapsed_ns": 136741144,
+          "name": "full-symbol",
+          "rows": 333852
+        },
+        {
+          "blocks_read": 0,
+          "elapsed_ns": 368609,
+          "name": "absent-symbol",
+          "rows": 0
+        }
+      ],
+      "read_ns": 105972244,
+      "round": 3,
+      "write_sync_ns": 0
+    },
+    {
+      "bytes": 5950242,
+      "mode": "DictionaryLz4",
+      "path": "artifacts/b12-storage-final/parquet-dictionary-lz4-6.parquet",
+      "queries": [
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 6201165,
+          "name": "window-25-10ms",
+          "rows": 1268
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 2923234,
+          "name": "window-50-10ms",
+          "rows": 266
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 2914226,
+          "name": "window-75-10ms",
+          "rows": 57
+        },
+        {
+          "blocks_read": 32,
+          "elapsed_ns": 122478178,
+          "name": "full-symbol",
+          "rows": 333852
+        },
+        {
+          "blocks_read": 0,
+          "elapsed_ns": 366152,
+          "name": "absent-symbol",
+          "rows": 0
+        }
+      ],
+      "read_ns": 91455999,
+      "round": 3,
+      "write_sync_ns": 0
+    },
+    {
+      "bytes": 9242314,
+      "mode": "DeltaLz4",
+      "path": "artifacts/b12-storage-final/parquet-delta-lz4-6.parquet",
+      "queries": [
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 7095530,
+          "name": "window-25-10ms",
+          "rows": 1268
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 3932123,
+          "name": "window-50-10ms",
+          "rows": 266
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 3921788,
+          "name": "window-75-10ms",
+          "rows": 57
+        },
+        {
+          "blocks_read": 32,
+          "elapsed_ns": 136645028,
+          "name": "full-symbol",
+          "rows": 333852
+        },
+        {
+          "blocks_read": 0,
+          "elapsed_ns": 367001,
+          "name": "absent-symbol",
+          "rows": 0
+        }
+      ],
+      "read_ns": 105805283,
+      "round": 4,
+      "write_sync_ns": 0
+    },
+    {
+      "bytes": 3703770,
+      "mode": "Gqodb",
+      "path": "artifacts/b12-storage-final/gqodb-6.gqodb.ob",
+      "queries": [
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 8782841,
+          "name": "window-25-10ms",
+          "rows": 1268
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 7486511,
+          "name": "window-50-10ms",
+          "rows": 266
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 7481671,
+          "name": "window-75-10ms",
+          "rows": 57
+        },
+        {
+          "blocks_read": 32,
+          "elapsed_ns": 140495751,
+          "name": "full-symbol",
+          "rows": 333852
+        },
+        {
+          "blocks_read": 0,
+          "elapsed_ns": 110185,
+          "name": "absent-symbol",
+          "rows": 0
+        }
+      ],
+      "read_ns": 163658455,
+      "round": 4,
+      "write_sync_ns": 0
+    },
+    {
+      "bytes": 5950242,
+      "mode": "DictionaryLz4",
+      "path": "artifacts/b12-storage-final/parquet-dictionary-lz4-6.parquet",
+      "queries": [
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 6131595,
+          "name": "window-25-10ms",
+          "rows": 1268
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 2913815,
+          "name": "window-50-10ms",
+          "rows": 266
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 2929382,
+          "name": "window-75-10ms",
+          "rows": 57
+        },
+        {
+          "blocks_read": 32,
+          "elapsed_ns": 122480153,
+          "name": "full-symbol",
+          "rows": 333852
+        },
+        {
+          "blocks_read": 0,
+          "elapsed_ns": 366242,
+          "name": "absent-symbol",
+          "rows": 0
+        }
+      ],
+      "read_ns": 91502332,
+      "round": 4,
+      "write_sync_ns": 0
+    },
+    {
+      "bytes": 5950242,
+      "mode": "DictionaryLz4",
+      "path": "artifacts/b12-storage-final/parquet-dictionary-lz4-6.parquet",
+      "queries": [
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 6198722,
+          "name": "window-25-10ms",
+          "rows": 1268
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 2915397,
+          "name": "window-50-10ms",
+          "rows": 266
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 2911843,
+          "name": "window-75-10ms",
+          "rows": 57
+        },
+        {
+          "blocks_read": 32,
+          "elapsed_ns": 122311967,
+          "name": "full-symbol",
+          "rows": 333852
+        },
+        {
+          "blocks_read": 0,
+          "elapsed_ns": 384248,
+          "name": "absent-symbol",
+          "rows": 0
+        }
+      ],
+      "read_ns": 91566647,
+      "round": 5,
+      "write_sync_ns": 0
+    },
+    {
+      "bytes": 3703770,
+      "mode": "Gqodb",
+      "path": "artifacts/b12-storage-final/gqodb-6.gqodb.ob",
+      "queries": [
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 8731913,
+          "name": "window-25-10ms",
+          "rows": 1268
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 7479809,
+          "name": "window-50-10ms",
+          "rows": 266
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 7485993,
+          "name": "window-75-10ms",
+          "rows": 57
+        },
+        {
+          "blocks_read": 32,
+          "elapsed_ns": 140631603,
+          "name": "full-symbol",
+          "rows": 333852
+        },
+        {
+          "blocks_read": 0,
+          "elapsed_ns": 111863,
+          "name": "absent-symbol",
+          "rows": 0
+        }
+      ],
+      "read_ns": 163799654,
+      "round": 5,
+      "write_sync_ns": 0
+    },
+    {
+      "bytes": 9242314,
+      "mode": "DeltaLz4",
+      "path": "artifacts/b12-storage-final/parquet-delta-lz4-6.parquet",
+      "queries": [
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 7080493,
+          "name": "window-25-10ms",
+          "rows": 1268
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 3938310,
+          "name": "window-50-10ms",
+          "rows": 266
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 3933428,
+          "name": "window-75-10ms",
+          "rows": 57
+        },
+        {
+          "blocks_read": 32,
+          "elapsed_ns": 136640134,
+          "name": "full-symbol",
+          "rows": 333852
+        },
+        {
+          "blocks_read": 0,
+          "elapsed_ns": 341986,
+          "name": "absent-symbol",
+          "rows": 0
+        }
+      ],
+      "read_ns": 106161838,
+      "round": 5,
+      "write_sync_ns": 0
+    },
+    {
+      "bytes": 3703770,
+      "mode": "Gqodb",
+      "path": "artifacts/b12-storage-final/gqodb-6.gqodb.ob",
+      "queries": [
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 8958176,
+          "name": "window-25-10ms",
+          "rows": 1268
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 7562479,
+          "name": "window-50-10ms",
+          "rows": 266
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 7532136,
+          "name": "window-75-10ms",
+          "rows": 57
+        },
+        {
+          "blocks_read": 32,
+          "elapsed_ns": 140768576,
+          "name": "full-symbol",
+          "rows": 333852
+        },
+        {
+          "blocks_read": 0,
+          "elapsed_ns": 111781,
+          "name": "absent-symbol",
+          "rows": 0
+        }
+      ],
+      "read_ns": 163681654,
+      "round": 6,
+      "write_sync_ns": 0
+    },
+    {
+      "bytes": 5950242,
+      "mode": "DictionaryLz4",
+      "path": "artifacts/b12-storage-final/parquet-dictionary-lz4-6.parquet",
+      "queries": [
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 6121343,
+          "name": "window-25-10ms",
+          "rows": 1268
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 2928913,
+          "name": "window-50-10ms",
+          "rows": 266
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 2909906,
+          "name": "window-75-10ms",
+          "rows": 57
+        },
+        {
+          "blocks_read": 32,
+          "elapsed_ns": 122447695,
+          "name": "full-symbol",
+          "rows": 333852
+        },
+        {
+          "blocks_read": 0,
+          "elapsed_ns": 368510,
+          "name": "absent-symbol",
+          "rows": 0
+        }
+      ],
+      "read_ns": 91700878,
+      "round": 6,
+      "write_sync_ns": 0
+    },
+    {
+      "bytes": 9242314,
+      "mode": "DeltaLz4",
+      "path": "artifacts/b12-storage-final/parquet-delta-lz4-6.parquet",
+      "queries": [
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 7110693,
+          "name": "window-25-10ms",
+          "rows": 1268
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 3962438,
+          "name": "window-50-10ms",
+          "rows": 266
+        },
+        {
+          "blocks_read": 2,
+          "elapsed_ns": 3937209,
+          "name": "window-75-10ms",
+          "rows": 57
+        },
+        {
+          "blocks_read": 32,
+          "elapsed_ns": 136780437,
+          "name": "full-symbol",
+          "rows": 333852
+        },
+        {
+          "blocks_read": 0,
+          "elapsed_ns": 364336,
+          "name": "absent-symbol",
+          "rows": 0
+        }
+      ],
+      "read_ns": 106297622,
+      "round": 6,
+      "write_sync_ns": 0
+    }
+  ],
+  "source_sha256": "d8633c357f737ac866e54cc12db019d3de45ae22b8c9d11ac701e959676f077e",
+  "warmup_round": 0
+}

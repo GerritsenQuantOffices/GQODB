@@ -1,0 +1,48 @@
+{
+  "experiment": "B11",
+  "date": "2026-09-07",
+  "measured_code_commit": "8054532c8e696f62f935e344a9d17bb1b0a6a306",
+  "binary_sha256": "ab6053dfd76abc25c6ac2097b1f5f0cbc320a50dbec41ba8e310fc0a762157b8",
+  "cargo_lock_sha256": "28db0380139eafdae11e8174011d57beb9e0a4a44a6e7967b916154de9a48d31",
+  "build_command": "cargo build -p gqodb-blocks --release --locked --offline --example market_benchmark",
+  "rustc": "1.96.0 (ac68faa20 2026-05-25)",
+  "llvm": "22.1.2",
+  "target": "x86_64-unknown-linux-gnu",
+  "cpu": "Intel Xeon E5-2690 v4",
+  "affinity_cpu": 2,
+  "execution": "local research node, default sandbox, no host tuning",
+  "run_environment": {
+    "GQODB_BOOK_CODEC": "1"
+  },
+  "inputs": [
+    {
+      "sample": "hour06",
+      "path": "capture://bybit/raw/full_orderbook_delta/date=2026-09-03/hour=06/bybit_20260903T06_b0b4bde5c08e4ea4a807155035eed826.jsonl.gz",
+      "sha256": "d8633c357f737ac866e54cc12db019d3de45ae22b8c9d11ac701e959676f077e",
+      "rows": 1048576,
+      "events": 7265
+    },
+    {
+      "sample": "hour07",
+      "path": "capture://bybit/raw/full_orderbook_delta/date=2026-09-03/hour=07/bybit_20260903T07_b0b4bde5c08e4ea4a807155035eed826.jsonl.gz",
+      "sha256": "fcfc564864049374ce8e6f9ea8d9b49edea396c4445b710a229177ec8e86e6ab",
+      "rows": 1048603,
+      "events": 4493
+    }
+  ],
+  "result_sha256": {
+    "screen.json": "fe674e8d9baf74d6055695cfb6b73e0b91249a730737006f74aa68737e822915",
+    "hour06.json": "9b66eec09ba664302ebe2caac6e53ddd65389157a0191f6ec54c0c282c55f2d5",
+    "hour07.json": "bd953610f74000862dc322a2a42c1ea5e1d1241d50815d582056b70d80bec414"
+  },
+  "screen": {
+    "binary_sha256": "781f181ab4c995db5bba4d3df6904c954716d1c607c3b741e0134abd44e8cfa0",
+    "source_status": "uncommitted pre-optimization development screen; final source differs in decode plane loop"
+  },
+  "validation": [
+    "cargo test --workspace --all-targets --locked --offline",
+    "cargo clippy --workspace --all-targets --locked --offline -- -D warnings",
+    "cargo fmt --all --check"
+  ],
+  "note": "Final test/documentation commit adds boundary tests only; measured codec implementation is at measured_code_commit. No raw market data committed."
+}

@@ -1,0 +1,468 @@
+{
+  "args": [
+    "target/release/examples/market_benchmark",
+    "trades",
+    "input://parquet/zstd-9/UNIUSDT/05-2022/binance/binance_aggtrades_monthly__UNIUSDT-aggTrades-2022-05.parquet",
+    "results/b06/uni-final.json",
+    "1048576",
+    "32768",
+    "9",
+    "1",
+    "0"
+  ],
+  "arrow_input_bytes": 59793408,
+  "blocks": 32,
+  "experiment": "B06",
+  "process_memory": [
+    "VmHWM:\t   88464 kB",
+    "VmRSS:\t   88464 kB"
+  ],
+  "provenance": {
+    "projection": "all source columns, original Arrow schema, nulls and bitwise float values",
+    "row_group": 1,
+    "skip_batches": 0,
+    "source_rows": 3843555
+  },
+  "repetitions": 9,
+  "rows": 1048576,
+  "samples": [
+    {
+      "bytes": 4707768,
+      "decode_ns": 21421281,
+      "encode_ns": 66346874,
+      "mode": "gqodb-adaptive-lz4",
+      "round": 0
+    },
+    {
+      "bytes": 11349249,
+      "decode_ns": 31760257,
+      "encode_ns": 143421080,
+      "mode": "parquet-delta-bss-lz4",
+      "round": 0
+    },
+    {
+      "bytes": 33101504,
+      "decode_ns": 82977683,
+      "encode_ns": 493357586,
+      "mode": "parquet-dictionary-lz4",
+      "round": 0
+    },
+    {
+      "bytes": 11139978,
+      "decode_ns": 35945544,
+      "encode_ns": 144303269,
+      "mode": "parquet-delta-bss-snappy",
+      "round": 0
+    },
+    {
+      "bytes": 8671323,
+      "decode_ns": 251919374,
+      "encode_ns": 924963614,
+      "mode": "parquet-delta-bss-brotli5",
+      "round": 0
+    },
+    {
+      "bytes": 6188763,
+      "decode_ns": 36572056,
+      "encode_ns": 143557166,
+      "mode": "parquet-normalized-lz4",
+      "round": 0
+    },
+    {
+      "bytes": 6188763,
+      "decode_ns": 37372924,
+      "encode_ns": 143191052,
+      "mode": "parquet-normalized-lz4",
+      "round": 1
+    },
+    {
+      "bytes": 8671323,
+      "decode_ns": 251561541,
+      "encode_ns": 923189471,
+      "mode": "parquet-delta-bss-brotli5",
+      "round": 1
+    },
+    {
+      "bytes": 11139978,
+      "decode_ns": 36107347,
+      "encode_ns": 145720192,
+      "mode": "parquet-delta-bss-snappy",
+      "round": 1
+    },
+    {
+      "bytes": 33101504,
+      "decode_ns": 83290513,
+      "encode_ns": 493792798,
+      "mode": "parquet-dictionary-lz4",
+      "round": 1
+    },
+    {
+      "bytes": 11349249,
+      "decode_ns": 31330087,
+      "encode_ns": 145294765,
+      "mode": "parquet-delta-bss-lz4",
+      "round": 1
+    },
+    {
+      "bytes": 4707768,
+      "decode_ns": 21337117,
+      "encode_ns": 65473545,
+      "mode": "gqodb-adaptive-lz4",
+      "round": 1
+    },
+    {
+      "bytes": 11349249,
+      "decode_ns": 31463541,
+      "encode_ns": 145419765,
+      "mode": "parquet-delta-bss-lz4",
+      "round": 2
+    },
+    {
+      "bytes": 33101504,
+      "decode_ns": 83794529,
+      "encode_ns": 492608035,
+      "mode": "parquet-dictionary-lz4",
+      "round": 2
+    },
+    {
+      "bytes": 11139978,
+      "decode_ns": 35721521,
+      "encode_ns": 142624037,
+      "mode": "parquet-delta-bss-snappy",
+      "round": 2
+    },
+    {
+      "bytes": 8671323,
+      "decode_ns": 250776581,
+      "encode_ns": 922701206,
+      "mode": "parquet-delta-bss-brotli5",
+      "round": 2
+    },
+    {
+      "bytes": 6188763,
+      "decode_ns": 37082299,
+      "encode_ns": 142949068,
+      "mode": "parquet-normalized-lz4",
+      "round": 2
+    },
+    {
+      "bytes": 4707768,
+      "decode_ns": 21233914,
+      "encode_ns": 65564983,
+      "mode": "gqodb-adaptive-lz4",
+      "round": 2
+    },
+    {
+      "bytes": 4707768,
+      "decode_ns": 21194588,
+      "encode_ns": 65442064,
+      "mode": "gqodb-adaptive-lz4",
+      "round": 3
+    },
+    {
+      "bytes": 6188763,
+      "decode_ns": 36556537,
+      "encode_ns": 142241167,
+      "mode": "parquet-normalized-lz4",
+      "round": 3
+    },
+    {
+      "bytes": 8671323,
+      "decode_ns": 252526424,
+      "encode_ns": 926376673,
+      "mode": "parquet-delta-bss-brotli5",
+      "round": 3
+    },
+    {
+      "bytes": 11139978,
+      "decode_ns": 36277483,
+      "encode_ns": 145704441,
+      "mode": "parquet-delta-bss-snappy",
+      "round": 3
+    },
+    {
+      "bytes": 33101504,
+      "decode_ns": 82294806,
+      "encode_ns": 490284139,
+      "mode": "parquet-dictionary-lz4",
+      "round": 3
+    },
+    {
+      "bytes": 11349249,
+      "decode_ns": 31279672,
+      "encode_ns": 142611861,
+      "mode": "parquet-delta-bss-lz4",
+      "round": 3
+    },
+    {
+      "bytes": 33101504,
+      "decode_ns": 83145122,
+      "encode_ns": 492713632,
+      "mode": "parquet-dictionary-lz4",
+      "round": 4
+    },
+    {
+      "bytes": 11139978,
+      "decode_ns": 36160327,
+      "encode_ns": 145929857,
+      "mode": "parquet-delta-bss-snappy",
+      "round": 4
+    },
+    {
+      "bytes": 8671323,
+      "decode_ns": 251187029,
+      "encode_ns": 922367436,
+      "mode": "parquet-delta-bss-brotli5",
+      "round": 4
+    },
+    {
+      "bytes": 6188763,
+      "decode_ns": 36762687,
+      "encode_ns": 143289256,
+      "mode": "parquet-normalized-lz4",
+      "round": 4
+    },
+    {
+      "bytes": 4707768,
+      "decode_ns": 21169856,
+      "encode_ns": 65328727,
+      "mode": "gqodb-adaptive-lz4",
+      "round": 4
+    },
+    {
+      "bytes": 11349249,
+      "decode_ns": 31135651,
+      "encode_ns": 142468785,
+      "mode": "parquet-delta-bss-lz4",
+      "round": 4
+    },
+    {
+      "bytes": 11349249,
+      "decode_ns": 31215258,
+      "encode_ns": 142686146,
+      "mode": "parquet-delta-bss-lz4",
+      "round": 5
+    },
+    {
+      "bytes": 4707768,
+      "decode_ns": 21349580,
+      "encode_ns": 65630688,
+      "mode": "gqodb-adaptive-lz4",
+      "round": 5
+    },
+    {
+      "bytes": 6188763,
+      "decode_ns": 36600067,
+      "encode_ns": 142568978,
+      "mode": "parquet-normalized-lz4",
+      "round": 5
+    },
+    {
+      "bytes": 8671323,
+      "decode_ns": 249042031,
+      "encode_ns": 918562518,
+      "mode": "parquet-delta-bss-brotli5",
+      "round": 5
+    },
+    {
+      "bytes": 11139978,
+      "decode_ns": 35857928,
+      "encode_ns": 143600366,
+      "mode": "parquet-delta-bss-snappy",
+      "round": 5
+    },
+    {
+      "bytes": 33101504,
+      "decode_ns": 81688395,
+      "encode_ns": 488246174,
+      "mode": "parquet-dictionary-lz4",
+      "round": 5
+    },
+    {
+      "bytes": 11139978,
+      "decode_ns": 36073073,
+      "encode_ns": 145169028,
+      "mode": "parquet-delta-bss-snappy",
+      "round": 6
+    },
+    {
+      "bytes": 8671323,
+      "decode_ns": 250260058,
+      "encode_ns": 919969045,
+      "mode": "parquet-delta-bss-brotli5",
+      "round": 6
+    },
+    {
+      "bytes": 6188763,
+      "decode_ns": 36878470,
+      "encode_ns": 145134906,
+      "mode": "parquet-normalized-lz4",
+      "round": 6
+    },
+    {
+      "bytes": 4707768,
+      "decode_ns": 21277218,
+      "encode_ns": 65478036,
+      "mode": "gqodb-adaptive-lz4",
+      "round": 6
+    },
+    {
+      "bytes": 11349249,
+      "decode_ns": 31172502,
+      "encode_ns": 142944795,
+      "mode": "parquet-delta-bss-lz4",
+      "round": 6
+    },
+    {
+      "bytes": 33101504,
+      "decode_ns": 81825901,
+      "encode_ns": 491874136,
+      "mode": "parquet-dictionary-lz4",
+      "round": 6
+    },
+    {
+      "bytes": 33101504,
+      "decode_ns": 82471680,
+      "encode_ns": 490167238,
+      "mode": "parquet-dictionary-lz4",
+      "round": 7
+    },
+    {
+      "bytes": 11349249,
+      "decode_ns": 31140816,
+      "encode_ns": 142838191,
+      "mode": "parquet-delta-bss-lz4",
+      "round": 7
+    },
+    {
+      "bytes": 4707768,
+      "decode_ns": 21325628,
+      "encode_ns": 65428207,
+      "mode": "gqodb-adaptive-lz4",
+      "round": 7
+    },
+    {
+      "bytes": 6188763,
+      "decode_ns": 36743026,
+      "encode_ns": 142622835,
+      "mode": "parquet-normalized-lz4",
+      "round": 7
+    },
+    {
+      "bytes": 8671323,
+      "decode_ns": 252005893,
+      "encode_ns": 923739709,
+      "mode": "parquet-delta-bss-brotli5",
+      "round": 7
+    },
+    {
+      "bytes": 11139978,
+      "decode_ns": 35682816,
+      "encode_ns": 142106810,
+      "mode": "parquet-delta-bss-snappy",
+      "round": 7
+    },
+    {
+      "bytes": 8671323,
+      "decode_ns": 252921345,
+      "encode_ns": 925494163,
+      "mode": "parquet-delta-bss-brotli5",
+      "round": 8
+    },
+    {
+      "bytes": 6188763,
+      "decode_ns": 37123863,
+      "encode_ns": 144227796,
+      "mode": "parquet-normalized-lz4",
+      "round": 8
+    },
+    {
+      "bytes": 4707768,
+      "decode_ns": 21217295,
+      "encode_ns": 65563956,
+      "mode": "gqodb-adaptive-lz4",
+      "round": 8
+    },
+    {
+      "bytes": 11349249,
+      "decode_ns": 32182072,
+      "encode_ns": 145812968,
+      "mode": "parquet-delta-bss-lz4",
+      "round": 8
+    },
+    {
+      "bytes": 33101504,
+      "decode_ns": 82296195,
+      "encode_ns": 490333121,
+      "mode": "parquet-dictionary-lz4",
+      "round": 8
+    },
+    {
+      "bytes": 11139978,
+      "decode_ns": 35951236,
+      "encode_ns": 143862687,
+      "mode": "parquet-delta-bss-snappy",
+      "round": 8
+    }
+  ],
+  "scratch_bytes": [
+    100352,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "source_sha256": "9e69c0f435bb02d4f4a1d2a8a6a9f116afdfe094b3fb51d1d367d5ceea79eea9",
+  "summary": [
+    {
+      "bytes": 4707768,
+      "decode_median_ns": 21277218,
+      "decode_p95_ns": 21421281,
+      "encode_median_ns": 65478036,
+      "encode_p95_ns": 66346874,
+      "mode": "gqodb-adaptive-lz4"
+    },
+    {
+      "bytes": 11349249,
+      "decode_median_ns": 31279672,
+      "decode_p95_ns": 32182072,
+      "encode_median_ns": 142944795,
+      "encode_p95_ns": 145812968,
+      "mode": "parquet-delta-bss-lz4"
+    },
+    {
+      "bytes": 33101504,
+      "decode_median_ns": 82471680,
+      "decode_p95_ns": 83794529,
+      "encode_median_ns": 491874136,
+      "encode_p95_ns": 493792798,
+      "mode": "parquet-dictionary-lz4"
+    },
+    {
+      "bytes": 11139978,
+      "decode_median_ns": 35951236,
+      "decode_p95_ns": 36277483,
+      "encode_median_ns": 144303269,
+      "encode_p95_ns": 145929857,
+      "mode": "parquet-delta-bss-snappy"
+    },
+    {
+      "bytes": 8671323,
+      "decode_median_ns": 251561541,
+      "decode_p95_ns": 252921345,
+      "encode_median_ns": 923189471,
+      "encode_p95_ns": 926376673,
+      "mode": "parquet-delta-bss-brotli5"
+    },
+    {
+      "bytes": 6188763,
+      "decode_median_ns": 36762687,
+      "decode_p95_ns": 37372924,
+      "encode_median_ns": 143191052,
+      "encode_p95_ns": 145134906,
+      "mode": "parquet-normalized-lz4"
+    }
+  ],
+  "warmup_passes": 1
+}

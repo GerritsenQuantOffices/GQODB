@@ -1,0 +1,4 @@
+# Raw evidence logs keep the producer's exact whitespace and hashes.
+*.log -whitespace
+# Source/claim registers use standard CRLF CSV records.
+*.csv whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

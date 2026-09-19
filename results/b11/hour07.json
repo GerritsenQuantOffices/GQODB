@@ -1,0 +1,541 @@
+{
+  "args": [
+    "target/release/examples/market_benchmark",
+    "book",
+    "capture://bybit/raw/full_orderbook_delta/date=2026-09-03/hour=07/bybit_20260903T07_b0b4bde5c08e4ea4a807155035eed826.jsonl.gz",
+    "results/b11/hour07.json",
+    "1048576",
+    "32768",
+    "9",
+    "0",
+    "0"
+  ],
+  "arrow_input_bytes": 109096088,
+  "blocks": 33,
+  "experiment": "B11",
+  "process_memory": [
+    "VmHWM:\t  142508 kB",
+    "VmRSS:\t  136676 kB"
+  ],
+  "provenance": {
+    "decimal_scale": 100000000,
+    "empty_events_excluded": 0,
+    "events": 4493,
+    "levels": 1048603,
+    "projection": "level rows, event timestamps/IDs/type/symbol; collector envelope and original JSON lexical form excluded; no replay correctness claim"
+  },
+  "repetitions": 9,
+  "rows": 1048603,
+  "samples": [
+    {
+      "bytes": 6900562,
+      "decode_ns": 41274189,
+      "encode_ns": 205047631,
+      "mode": "gqodb-adaptive-lz4",
+      "round": 0
+    },
+    {
+      "bytes": 8558025,
+      "decode_ns": 48777630,
+      "encode_ns": 226902376,
+      "mode": "parquet-delta-bss-lz4",
+      "round": 0
+    },
+    {
+      "bytes": 6182986,
+      "decode_ns": 34330190,
+      "encode_ns": 298373780,
+      "mode": "parquet-dictionary-lz4",
+      "round": 0
+    },
+    {
+      "bytes": 8680362,
+      "decode_ns": 49134946,
+      "encode_ns": 215220752,
+      "mode": "parquet-delta-bss-snappy",
+      "round": 0
+    },
+    {
+      "bytes": 6884706,
+      "decode_ns": 349255245,
+      "encode_ns": 1107458371,
+      "mode": "parquet-delta-bss-brotli5",
+      "round": 0
+    },
+    {
+      "bytes": 8634475,
+      "decode_ns": 59879754,
+      "encode_ns": 259775547,
+      "mode": "parquet-normalized-lz4",
+      "round": 0
+    },
+    {
+      "bytes": 3529498,
+      "decode_ns": 39288579,
+      "encode_ns": 178027164,
+      "mode": "gqodb-book-runs-planes-lz4",
+      "round": 0
+    },
+    {
+      "bytes": 3529498,
+      "decode_ns": 39246383,
+      "encode_ns": 178007643,
+      "mode": "gqodb-book-runs-planes-lz4",
+      "round": 1
+    },
+    {
+      "bytes": 8634475,
+      "decode_ns": 58193159,
+      "encode_ns": 258481552,
+      "mode": "parquet-normalized-lz4",
+      "round": 1
+    },
+    {
+      "bytes": 6884706,
+      "decode_ns": 349963143,
+      "encode_ns": 1107583593,
+      "mode": "parquet-delta-bss-brotli5",
+      "round": 1
+    },
+    {
+      "bytes": 8680362,
+      "decode_ns": 48963834,
+      "encode_ns": 216376271,
+      "mode": "parquet-delta-bss-snappy",
+      "round": 1
+    },
+    {
+      "bytes": 6182986,
+      "decode_ns": 34371595,
+      "encode_ns": 300661370,
+      "mode": "parquet-dictionary-lz4",
+      "round": 1
+    },
+    {
+      "bytes": 8558025,
+      "decode_ns": 48791328,
+      "encode_ns": 226696118,
+      "mode": "parquet-delta-bss-lz4",
+      "round": 1
+    },
+    {
+      "bytes": 6900562,
+      "decode_ns": 40479843,
+      "encode_ns": 204781656,
+      "mode": "gqodb-adaptive-lz4",
+      "round": 1
+    },
+    {
+      "bytes": 8558025,
+      "decode_ns": 49159695,
+      "encode_ns": 227460827,
+      "mode": "parquet-delta-bss-lz4",
+      "round": 2
+    },
+    {
+      "bytes": 6182986,
+      "decode_ns": 34394356,
+      "encode_ns": 298904011,
+      "mode": "parquet-dictionary-lz4",
+      "round": 2
+    },
+    {
+      "bytes": 8680362,
+      "decode_ns": 49040833,
+      "encode_ns": 216392844,
+      "mode": "parquet-delta-bss-snappy",
+      "round": 2
+    },
+    {
+      "bytes": 6884706,
+      "decode_ns": 352153792,
+      "encode_ns": 1110741885,
+      "mode": "parquet-delta-bss-brotli5",
+      "round": 2
+    },
+    {
+      "bytes": 8634475,
+      "decode_ns": 63150792,
+      "encode_ns": 260169572,
+      "mode": "parquet-normalized-lz4",
+      "round": 2
+    },
+    {
+      "bytes": 3529498,
+      "decode_ns": 39499666,
+      "encode_ns": 180145635,
+      "mode": "gqodb-book-runs-planes-lz4",
+      "round": 2
+    },
+    {
+      "bytes": 6900562,
+      "decode_ns": 40590914,
+      "encode_ns": 205732538,
+      "mode": "gqodb-adaptive-lz4",
+      "round": 2
+    },
+    {
+      "bytes": 6900562,
+      "decode_ns": 40952659,
+      "encode_ns": 206530960,
+      "mode": "gqodb-adaptive-lz4",
+      "round": 3
+    },
+    {
+      "bytes": 3529498,
+      "decode_ns": 39681162,
+      "encode_ns": 178129166,
+      "mode": "gqodb-book-runs-planes-lz4",
+      "round": 3
+    },
+    {
+      "bytes": 8634475,
+      "decode_ns": 62324224,
+      "encode_ns": 285040516,
+      "mode": "parquet-normalized-lz4",
+      "round": 3
+    },
+    {
+      "bytes": 6884706,
+      "decode_ns": 358335269,
+      "encode_ns": 1131793647,
+      "mode": "parquet-delta-bss-brotli5",
+      "round": 3
+    },
+    {
+      "bytes": 8680362,
+      "decode_ns": 48724212,
+      "encode_ns": 217713664,
+      "mode": "parquet-delta-bss-snappy",
+      "round": 3
+    },
+    {
+      "bytes": 6182986,
+      "decode_ns": 36171667,
+      "encode_ns": 302613183,
+      "mode": "parquet-dictionary-lz4",
+      "round": 3
+    },
+    {
+      "bytes": 8558025,
+      "decode_ns": 50611274,
+      "encode_ns": 228014259,
+      "mode": "parquet-delta-bss-lz4",
+      "round": 3
+    },
+    {
+      "bytes": 6182986,
+      "decode_ns": 35752407,
+      "encode_ns": 299391456,
+      "mode": "parquet-dictionary-lz4",
+      "round": 4
+    },
+    {
+      "bytes": 8680362,
+      "decode_ns": 48588460,
+      "encode_ns": 217077272,
+      "mode": "parquet-delta-bss-snappy",
+      "round": 4
+    },
+    {
+      "bytes": 6884706,
+      "decode_ns": 347318144,
+      "encode_ns": 1098264170,
+      "mode": "parquet-delta-bss-brotli5",
+      "round": 4
+    },
+    {
+      "bytes": 8634475,
+      "decode_ns": 59379501,
+      "encode_ns": 258831793,
+      "mode": "parquet-normalized-lz4",
+      "round": 4
+    },
+    {
+      "bytes": 3529498,
+      "decode_ns": 40641613,
+      "encode_ns": 179401271,
+      "mode": "gqodb-book-runs-planes-lz4",
+      "round": 4
+    },
+    {
+      "bytes": 6900562,
+      "decode_ns": 40445779,
+      "encode_ns": 204922839,
+      "mode": "gqodb-adaptive-lz4",
+      "round": 4
+    },
+    {
+      "bytes": 8558025,
+      "decode_ns": 48736839,
+      "encode_ns": 225755011,
+      "mode": "parquet-delta-bss-lz4",
+      "round": 4
+    },
+    {
+      "bytes": 8558025,
+      "decode_ns": 48665696,
+      "encode_ns": 224745112,
+      "mode": "parquet-delta-bss-lz4",
+      "round": 5
+    },
+    {
+      "bytes": 6900562,
+      "decode_ns": 40440730,
+      "encode_ns": 204519460,
+      "mode": "gqodb-adaptive-lz4",
+      "round": 5
+    },
+    {
+      "bytes": 3529498,
+      "decode_ns": 39421642,
+      "encode_ns": 177708518,
+      "mode": "gqodb-book-runs-planes-lz4",
+      "round": 5
+    },
+    {
+      "bytes": 8634475,
+      "decode_ns": 58394156,
+      "encode_ns": 258863557,
+      "mode": "parquet-normalized-lz4",
+      "round": 5
+    },
+    {
+      "bytes": 6884706,
+      "decode_ns": 352693351,
+      "encode_ns": 1105184223,
+      "mode": "parquet-delta-bss-brotli5",
+      "round": 5
+    },
+    {
+      "bytes": 8680362,
+      "decode_ns": 49102674,
+      "encode_ns": 218172054,
+      "mode": "parquet-delta-bss-snappy",
+      "round": 5
+    },
+    {
+      "bytes": 6182986,
+      "decode_ns": 34798728,
+      "encode_ns": 301095788,
+      "mode": "parquet-dictionary-lz4",
+      "round": 5
+    },
+    {
+      "bytes": 8680362,
+      "decode_ns": 49116982,
+      "encode_ns": 216490296,
+      "mode": "parquet-delta-bss-snappy",
+      "round": 6
+    },
+    {
+      "bytes": 6884706,
+      "decode_ns": 347948046,
+      "encode_ns": 1101600666,
+      "mode": "parquet-delta-bss-brotli5",
+      "round": 6
+    },
+    {
+      "bytes": 8634475,
+      "decode_ns": 62087654,
+      "encode_ns": 260703056,
+      "mode": "parquet-normalized-lz4",
+      "round": 6
+    },
+    {
+      "bytes": 3529498,
+      "decode_ns": 39248960,
+      "encode_ns": 177255414,
+      "mode": "gqodb-book-runs-planes-lz4",
+      "round": 6
+    },
+    {
+      "bytes": 6900562,
+      "decode_ns": 40247094,
+      "encode_ns": 204297446,
+      "mode": "gqodb-adaptive-lz4",
+      "round": 6
+    },
+    {
+      "bytes": 8558025,
+      "decode_ns": 48699987,
+      "encode_ns": 225943500,
+      "mode": "parquet-delta-bss-lz4",
+      "round": 6
+    },
+    {
+      "bytes": 6182986,
+      "decode_ns": 34328327,
+      "encode_ns": 299339371,
+      "mode": "parquet-dictionary-lz4",
+      "round": 6
+    },
+    {
+      "bytes": 6182986,
+      "decode_ns": 34349200,
+      "encode_ns": 299866868,
+      "mode": "parquet-dictionary-lz4",
+      "round": 7
+    },
+    {
+      "bytes": 8558025,
+      "decode_ns": 48734204,
+      "encode_ns": 225897571,
+      "mode": "parquet-delta-bss-lz4",
+      "round": 7
+    },
+    {
+      "bytes": 6900562,
+      "decode_ns": 40367003,
+      "encode_ns": 204962489,
+      "mode": "gqodb-adaptive-lz4",
+      "round": 7
+    },
+    {
+      "bytes": 3529498,
+      "decode_ns": 39216184,
+      "encode_ns": 177325637,
+      "mode": "gqodb-book-runs-planes-lz4",
+      "round": 7
+    },
+    {
+      "bytes": 8634475,
+      "decode_ns": 58466432,
+      "encode_ns": 257830528,
+      "mode": "parquet-normalized-lz4",
+      "round": 7
+    },
+    {
+      "bytes": 6884706,
+      "decode_ns": 346810740,
+      "encode_ns": 1100084449,
+      "mode": "parquet-delta-bss-brotli5",
+      "round": 7
+    },
+    {
+      "bytes": 8680362,
+      "decode_ns": 48884894,
+      "encode_ns": 215606431,
+      "mode": "parquet-delta-bss-snappy",
+      "round": 7
+    },
+    {
+      "bytes": 6884706,
+      "decode_ns": 348124832,
+      "encode_ns": 1107639627,
+      "mode": "parquet-delta-bss-brotli5",
+      "round": 8
+    },
+    {
+      "bytes": 8634475,
+      "decode_ns": 62905040,
+      "encode_ns": 266247282,
+      "mode": "parquet-normalized-lz4",
+      "round": 8
+    },
+    {
+      "bytes": 3529498,
+      "decode_ns": 39270331,
+      "encode_ns": 177447626,
+      "mode": "gqodb-book-runs-planes-lz4",
+      "round": 8
+    },
+    {
+      "bytes": 6900562,
+      "decode_ns": 44731748,
+      "encode_ns": 222000656,
+      "mode": "gqodb-adaptive-lz4",
+      "round": 8
+    },
+    {
+      "bytes": 8558025,
+      "decode_ns": 48944481,
+      "encode_ns": 227638797,
+      "mode": "parquet-delta-bss-lz4",
+      "round": 8
+    },
+    {
+      "bytes": 6182986,
+      "decode_ns": 34317108,
+      "encode_ns": 300161339,
+      "mode": "parquet-dictionary-lz4",
+      "round": 8
+    },
+    {
+      "bytes": 8680362,
+      "decode_ns": 49026353,
+      "encode_ns": 218822347,
+      "mode": "parquet-delta-bss-snappy",
+      "round": 8
+    }
+  ],
+  "scratch_bytes": [
+    456352,
+    0,
+    0,
+    0,
+    0,
+    0,
+    131072
+  ],
+  "source_sha256": "fcfc564864049374ce8e6f9ea8d9b49edea396c4445b710a229177ec8e86e6ab",
+  "summary": [
+    {
+      "bytes": 6900562,
+      "decode_median_ns": 40479843,
+      "decode_p95_ns": 44731748,
+      "encode_median_ns": 204962489,
+      "encode_p95_ns": 222000656,
+      "mode": "gqodb-adaptive-lz4"
+    },
+    {
+      "bytes": 8558025,
+      "decode_median_ns": 48777630,
+      "decode_p95_ns": 50611274,
+      "encode_median_ns": 226696118,
+      "encode_p95_ns": 228014259,
+      "mode": "parquet-delta-bss-lz4"
+    },
+    {
+      "bytes": 6182986,
+      "decode_median_ns": 34371595,
+      "decode_p95_ns": 36171667,
+      "encode_median_ns": 299866868,
+      "encode_p95_ns": 302613183,
+      "mode": "parquet-dictionary-lz4"
+    },
+    {
+      "bytes": 8680362,
+      "decode_median_ns": 49026353,
+      "decode_p95_ns": 49134946,
+      "encode_median_ns": 216490296,
+      "encode_p95_ns": 218822347,
+      "mode": "parquet-delta-bss-snappy"
+    },
+    {
+      "bytes": 6884706,
+      "decode_median_ns": 349255245,
+      "decode_p95_ns": 358335269,
+      "encode_median_ns": 1107458371,
+      "encode_p95_ns": 1131793647,
+      "mode": "parquet-delta-bss-brotli5"
+    },
+    {
+      "bytes": 8634475,
+      "decode_median_ns": 59879754,
+      "decode_p95_ns": 63150792,
+      "encode_median_ns": 259775547,
+      "encode_p95_ns": 285040516,
+      "mode": "parquet-normalized-lz4"
+    },
+    {
+      "bytes": 3529498,
+      "decode_median_ns": 39288579,
+      "decode_p95_ns": 40641613,
+      "encode_median_ns": 178007643,
+      "encode_p95_ns": 180145635,
+      "mode": "gqodb-book-runs-planes-lz4"
+    }
+  ],
+  "warmup_passes": 1
+}

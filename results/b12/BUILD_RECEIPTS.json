@@ -1,0 +1,55 @@
+{
+  "experiment": "B12",
+  "date": "2026-09-07",
+  "measured_code_commit": "08fed144c7358516813cb867b6cc3367762f7622",
+  "build_command": "cargo build -p gqodb-store --release --locked --offline --bins --examples",
+  "rustc": "1.96.0 (ac68faa20 2026-05-25)",
+  "llvm": "22.1.2",
+  "target": "x86_64-unknown-linux-gnu",
+  "binary_sha256": {
+    "storage_benchmark": "ed3444689164a17a2e8c3f86554f5e51f16ece2db0e55af88ba3b7576aeb442a",
+    "ob_store": "3d05894335ebbfb460ba4dd880b4ee1e103fe3e994fc275d736d6e60f302d764"
+  },
+  "cargo_lock_sha256": "ee2cfcd7d32c52bf8fe1a0914cec1cf8d2fc1ba3dc2fd22adc497188b1a822d0",
+  "cpu": "Intel Xeon E5-2690 v4",
+  "affinity_cpu": 2,
+  "filesystem": "ext4 on /dev/mapper/ubuntu--vg-ubuntu--lv",
+  "cache": "warm/page-cache; no forced eviction",
+  "source": {
+    "path": "capture://bybit/raw/full_orderbook_delta/date=2026-09-03/hour=06/bybit_20260903T06_b0b4bde5c08e4ea4a807155035eed826.jsonl.gz",
+    "sha256": "d8633c357f737ac866e54cc12db019d3de45ae22b8c9d11ac701e959676f077e",
+    "rows": 1048576,
+    "events": 7265
+  },
+  "results_sha256": "e581008d373d049d69eae39f06ccd7562ccc52a987f33e1596856d141d59fb84",
+  "artifact_directory": "artifacts/b12-storage-final",
+  "identical_hashes_for_rounds_0_through_6": {
+    "gqodb-{round}.gqodb.ob": "3a6e9c10541480c40c9d020211c8eb88bc2dda5db892c4685161d818c764506f",
+    "parquet-dictionary-lz4-{round}.parquet": "134c93a2e8fb3238000e7b9519d0cd396c178a2318c5e4ca0f8745bc5501f3a1",
+    "parquet-delta-lz4-{round}.parquet": "141e072e0bc94ba74c96ff4035b9f9ecc67eac687f6e192485914304cb64d52c"
+  },
+  "real_recovery": {
+    "source": "artifacts/b12-recovery/interrupted.gqodb.ob",
+    "cut_bytes": 3641256,
+    "source_sha256_before_and_after": "739905a6f06975e13f3ee225854c5199889bbabc9d595e2b1c2291d3a4501791",
+    "output": "artifacts/b12-recovery/recovered.gqodb.ob",
+    "output_sha256": "243d8d6d92bd1a743bd0214ea89497118801088f9ed8fb4521c0e0d321212038",
+    "verified_blocks": 31,
+    "verified_rows": 1015808
+  },
+  "failed_attempt": {
+    "code_commit": "acdddd58fff302b2ef7772f44a40599470e2c33c",
+    "binary_sha256": "2b8fdf332d749ccab96a19bc5a70dd076774cc47521f82bf09570302f6a77d2b",
+    "directory": "artifacts/b12-storage",
+    "stage": "warmup; Parquet schema mismatch; no accepted measured samples"
+  },
+  "validation": [
+    "cargo test --workspace --all-targets --locked --offline",
+    "cargo test -p gqodb-store --all-targets --locked --offline",
+    "cargo test -p gqodb-store --example storage_benchmark --locked --offline",
+    "cargo clippy --workspace --all-targets --locked --offline -- -D warnings",
+    "cargo fmt --all --check",
+    "ob_store verify on real sealed and recovered files"
+  ],
+  "note": "Market artifacts ignored by Git; reports contain provenance and hashes only. No live services, original source mutations, cache eviction or host tuning."
+}

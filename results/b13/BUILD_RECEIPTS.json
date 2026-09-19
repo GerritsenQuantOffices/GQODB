@@ -1,0 +1,53 @@
+{
+  "experiment": "B13",
+  "date": "2026-09-07",
+  "baseline": {
+    "code_commit": "59835e7",
+    "binary": "artifacts/b13-binaries/baseline",
+    "sha256": "60d5650bb321e6dc87437e2ce017d1baba8760cb5e3caf14d25f5b90ae9bb186"
+  },
+  "candidate": {
+    "code_commit": "bfb2806ddeaab8a036a836659c7599dfb70b0c6a",
+    "binary": "artifacts/b13-binaries/candidate",
+    "sha256": "8873c728dbeb5641591b62948a09fc864a6d8ebcce8822b02ed86f67fd95c78a"
+  },
+  "build_command": "cargo build -p gqodb-store --release --locked --offline --example storage_benchmark",
+  "rustc": "1.96.0 (ac68faa20 2026-05-25)",
+  "llvm": "22.1.2",
+  "target": "x86_64-unknown-linux-gnu",
+  "cargo_lock_sha256": "ee2cfcd7d32c52bf8fe1a0914cec1cf8d2fc1ba3dc2fd22adc497188b1a822d0",
+  "environment": {
+    "GQODB_READ_ONLY": "artifacts/b12-storage-final",
+    "GQODB_READ_PROFILE": "1",
+    "affinity_cpu": 2
+  },
+  "source_sha256": "d8633c357f737ac866e54cc12db019d3de45ae22b8c9d11ac701e959676f077e",
+  "files_before_and_after": {
+    "artifacts/b12-storage-final/gqodb-6.gqodb.ob": "3a6e9c10541480c40c9d020211c8eb88bc2dda5db892c4685161d818c764506f",
+    "artifacts/b12-storage-final/parquet-dictionary-lz4-6.parquet": "134c93a2e8fb3238000e7b9519d0cd396c178a2318c5e4ca0f8745bc5501f3a1",
+    "artifacts/b12-storage-final/parquet-delta-lz4-6.parquet": "141e072e0bc94ba74c96ff4035b9f9ecc67eac687f6e192485914304cb64d52c"
+  },
+  "result_sha256": {
+    "old-0.json": "aad3305a5abd9b2388be1aa8a9ab31911fd53d3bbb00dd97ad41a9b75c159615",
+    "old-1.json": "ef18f17d3d7fef90e99324b3741fb58cd81a3090f4983fd3f00f205bc7e8b9f7",
+    "old-2.json": "5e7f56334ead54d7d07a8ecc57329b0402c8346d4dc727ba7ade9a3bdd092e4a",
+    "new-0.json": "dd51ae295ffb11092beb7934821517ca6753d67ace8733d572e35d5f6d279397",
+    "new-1.json": "7e565b82db8430f0bea9a1a65ee95ecedc9b33ddf330d708be1f9f670aa5147d",
+    "new-2.json": "5a30933e0ee01539005c52c7748aa42a5b6ae65ebe75907cf2768f9166aa29ea",
+    "profile-before.json": "a05ee70fbf805dc3af457c2bf035c463c69e5da0b1dcb01f1ceae663d349bca0"
+  },
+  "process_order": [
+    "old-0",
+    "new-0",
+    "new-1",
+    "old-1",
+    "old-2",
+    "new-2"
+  ],
+  "validation": [
+    "cargo test --workspace --all-targets --locked --offline",
+    "cargo clippy --workspace --all-targets --locked --offline -- -D warnings",
+    "cargo fmt --all --check"
+  ],
+  "scope": "Single B12 fixture; warm reads; no file rewrites, cold IO, concurrent bus benchmarks or host changes."
+}

@@ -1,0 +1,63 @@
+{
+  "experiment": "B15",
+  "date": "2026-09-07",
+  "baseline": {
+    "implementation_commit": "bfb2806ddeaab8a036a836659c7599dfb70b0c6a",
+    "binary": "artifacts/b13-binaries/candidate",
+    "sha256": "8873c728dbeb5641591b62948a09fc864a6d8ebcce8822b02ed86f67fd95c78a"
+  },
+  "candidate": {
+    "implementation_commit": "60e29f4c7eb46992e607587b870073735c74fd23",
+    "binary": "artifacts/b15-binaries/candidate",
+    "sha256": "f76463c95b14c6799c44a8c8378d2e11599d3852b540371e8a17833acb4620d0"
+  },
+  "build_command": "cargo build -p gqodb-store --release --locked --offline --example storage_benchmark",
+  "rustc": "1.96.0 (ac68faa20 2026-05-25)",
+  "llvm": "22.1.2",
+  "target": "x86_64-unknown-linux-gnu",
+  "environment": {
+    "GQODB_READ_ONLY": "artifacts/b12-storage-final",
+    "GQODB_READ_PROFILE": "1",
+    "affinity_cpu": 2,
+    "integrated_run": "both environment variables absent"
+  },
+  "source_sha256": "d8633c357f737ac866e54cc12db019d3de45ae22b8c9d11ac701e959676f077e",
+  "rows": 1048576,
+  "events": 7265,
+  "read_only_file_hashes_before_and_after": {
+    "gqodb": "3a6e9c10541480c40c9d020211c8eb88bc2dda5db892c4685161d818c764506f",
+    "dictionary_parquet": "134c93a2e8fb3238000e7b9519d0cd396c178a2318c5e4ca0f8745bc5501f3a1",
+    "delta_parquet": "141e072e0bc94ba74c96ff4035b9f9ecc67eac687f6e192485914304cb64d52c"
+  },
+  "new_round6_files": {
+    "artifacts/b15-storage/gqodb-6.gqodb.ob": "1c1c2e7ae55f668d4dcc88e5f14f629159cc79edb5ff2c3df3f94e9142fa3cc5",
+    "artifacts/b15-storage/parquet-dictionary-lz4-6.parquet": "e427d077f490bef32f80c553c7b56f3600ae27ac174e045eec6d255fe82bbdfe",
+    "artifacts/b15-storage/parquet-delta-lz4-6.parquet": "3cc24536c6a806858b4e92996f6969627cec356bb6ebbeca09e8595160800fad"
+  },
+  "result_sha256": {
+    "old-0.json": "f4544c54e858646fe6a937d9e7eb640085df34c3a9c719835b3b488d27df73d1",
+    "old-1.json": "173f09ab31c8cda503ea6293fbc6de86cddf3c3f793b316b00fac87683891b61",
+    "old-2.json": "3915e3c9c3c78f955d819d0428a96d12d462e1dddef0f12676f514a76fa4c288",
+    "new-0.json": "7eea358910b2e344d1eac5bfc2cb28f1c04d629e5d2c576f1736df7309e551fb",
+    "new-1.json": "d62265c87cd8e3383f6449d5d1e797b1f63766cbfc12b5dd9971a3e9475552d2",
+    "new-2.json": "9da3b35eea2cce207b9fdbc99c4c54c7bd306aba2d8491e2d2c7225a6a3224e0",
+    "screen.json": "fe99f34f7a46070ac8c89cf416b1b82c3b18a990d41b38734e17e91848c2468b",
+    "storage.json": "ad0306047638a53fdd145a9de9c3a0ac430e9b2a0ca8b58ab0f9d8233509fe56"
+  },
+  "process_order": [
+    "old-0",
+    "new-0",
+    "new-1",
+    "old-1",
+    "old-2",
+    "new-2"
+  ],
+  "validation": [
+    "cargo test -p gqodb-blocks --locked --offline",
+    "cargo test -p gqodb-blocks --test real_roundtrip --locked --offline",
+    "cargo test -p gqodb-store --all-targets --locked --offline",
+    "cargo clippy --workspace --all-targets --locked --offline -- -D warnings",
+    "cargo fmt --all --check"
+  ],
+  "notes": "No source overwrites, no format change, no host tuning; all data artifacts excluded from Git. New-write hashes can differ due to unordered schema metadata keys; inspected header confirms changed key order."
+}

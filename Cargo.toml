@@ -1,0 +1,19 @@
+[workspace]
+members = [
+    "crates/gqodb-types",
+    "crates/gqodb-blocks",
+    "crates/gqodb-store",
+    "crates/gqodb-codec",
+]
+resolver = "2"
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.85"
+version = "0.1.0"
+license = "Apache-2.0"
+repository = "https://github.com/GerritsenQuantOffices/GQODB"
+publish = false
+
+[profile.release]
+debug = 1
