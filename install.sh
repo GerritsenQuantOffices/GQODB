@@ -23,6 +23,7 @@ Defaults:
 Environment overrides:
   GQODB_REPOSITORY       Git repository URL
   GQODB_RUST_TOOLCHAIN   rustup toolchain (default: 1.96.0)
+  CARGO_BUILD_JOBS      optional Cargo parallel-build limit
 
 Missing Linux build dependencies and Rust are offered with separate [y/N]
 prompts. Only confirmed system-package installation uses sudo. Declining
@@ -173,8 +174,10 @@ git -C "$source_dir" fetch --quiet origin "$ref"
 git -C "$source_dir" checkout --quiet --detach FETCH_HEAD
 commit=$(git -C "$source_dir" rev-parse HEAD)
 
-printf 'Testing commit %s with Rust %s\n' "$commit" "$toolchain"
-(cd "$source_dir" && CARGO_TARGET_DIR="$source_dir/target" run_rust cargo test --workspace --all-targets --locked)
+printf 'Testing release profile for commit %s with Rust %s\n' "$commit" "$toolchain"
+# Reuse optimized dependencies for the installed binaries instead of compiling
+# separate debug and release dependency trees. Cargo manages parallel build jobs.
+(cd "$source_dir" && CARGO_TARGET_DIR="$source_dir/target" run_rust cargo test --release --workspace --all-targets --locked)
 (cd "$source_dir" && CARGO_TARGET_DIR="$source_dir/target" run_rust cargo build --workspace --bins --release --locked)
 
 bin_dir=$prefix/bin

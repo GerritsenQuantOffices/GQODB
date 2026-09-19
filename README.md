@@ -121,6 +121,11 @@ Existing binaries are refused unless `--force` is supplied. Use `--ref COMMIT`
 to select an exact source revision; `./install.sh --help` lists the options.
 This is a source installer, not a signed binary release.
 
+The installer tests the release profile and reuses its optimized dependencies
+when building the installed tools. Cargo compiles dependencies in parallel;
+its default job count follows the available logical CPUs. Set `CARGO_BUILD_JOBS`
+to override that limit. CI retains the separate debug-profile checks.
+
 Without an existing checkout, first download the script (using curl or a browser),
 then run it so the confirmation questions can read your answers:
 
