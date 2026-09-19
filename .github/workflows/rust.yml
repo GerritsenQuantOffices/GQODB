@@ -22,3 +22,5 @@ jobs:
         run: cargo +1.96.0 build --workspace --bins --release --locked
       - name: Verify benchmark evidence against its receipts
         run: python3 results/verify_public_evidence.py
+      - name: Verify every declared benchmark file is tracked
+        run: python3 benchmarks/verify_manifest.py

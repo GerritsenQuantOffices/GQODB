@@ -11,7 +11,7 @@
 <img src="docs/assets/badge-tests.svg" alt="tests: 47 passed, 0 failed">
 <img src="docs/assets/badge-evidence.svg" alt="evidence: 18 receipted files">
 
-[Build](#build-it) · [Formats](#formats) · [Benchmarks](#benchmarks) ·
+[Install](#build-it) · [Formats](#formats) · [Benchmarks](#benchmarks) ·
 [Evidence](#evidence) · [Crates](#crates) · [Licence](#licence-and-the-engine)
 
 </div>
@@ -135,6 +135,7 @@ target/release/ob_store query   /tmp/demo.gqodb.ob SYNTH 10 12      # 3 rows
 
 # recompute every published figure and check it against its receipt
 python3 results/verify_public_evidence.py
+python3 benchmarks/verify_manifest.py
 ```
 
 The tested toolchain is Rust 1.96.0 on Linux. The default build is pure Rust. The
@@ -157,6 +158,11 @@ do not imply nanosecond accuracy. See the [block format](docs/B02_FORMAT.md), th
 and the [order-book profile](crates/gqodb-codec/src/orderbook/README.md).
 
 ## Benchmarks
+
+The [benchmark inventory](benchmarks/README.md) and machine-readable
+[manifest](benchmarks/manifest.json) map every cited run to tracked runner source,
+protocols and stored evidence. CI fails if any declared benchmark file or any file
+under `results/` exists outside Git.
 
 Historical runs on fixed datasets and configurations, one host, warm caches. Every
 figure below is recomputed from the stored JSON by `results/verify_public_evidence.py`.

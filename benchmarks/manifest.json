@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "benchmark_sources": [
+    "crates/gqodb-blocks/prototype/src/main.rs",
+    "crates/gqodb-blocks/prototype/examples/paired_benchmark.rs",
+    "crates/gqodb-blocks/prototype/examples/real_benchmark.rs",
+    "crates/gqodb-blocks/prototype/examples/market_benchmark.rs",
+    "crates/gqodb-store/prototype/examples/storage_benchmark.rs"
+  ],
+  "runs": [
+    {"id":"B01","runner":"crates/gqodb-blocks/prototype/src/main.rs","protocols":["docs/BLOCK_EXPERIMENT.md","docs/BLOCK_PROTOCOL.md"],"evidence_directory":"results/b01-20260907","rerunnable_from_current_tree":true},
+    {"id":"B02","runner":"crates/gqodb-blocks/prototype/src/main.rs","protocols":["docs/B02_PROTOCOL.md","docs/B02_FORMAT.md"],"evidence_directory":"results/b02-20260907","rerunnable_from_current_tree":true},
+    {"id":"B06","runner":"crates/gqodb-blocks/prototype/examples/market_benchmark.rs","protocols":["docs/MARKET_BENCHMARK.md"],"evidence_directory":"results/b06","rerunnable_from_current_tree":true},
+    {"id":"B11","runner":"crates/gqodb-blocks/prototype/examples/market_benchmark.rs","protocols":["docs/B11_BOOK_COMPRESSION.md"],"evidence_directory":"results/b11","rerunnable_from_current_tree":true},
+    {"id":"B12","runner":"crates/gqodb-store/prototype/examples/storage_benchmark.rs","protocols":["docs/B12_STORAGE_PROTOCOL.md"],"evidence_directory":"results/b12","rerunnable_from_current_tree":true},
+    {"id":"B13","runner":"crates/gqodb-store/prototype/examples/storage_benchmark.rs","protocols":["docs/B13_READ_PROTOCOL.md"],"evidence_directory":"results/b13","rerunnable_from_current_tree":false,"reason":"paired commits predate the extracted public Git history"},
+    {"id":"B15","runner":"crates/gqodb-store/prototype/examples/storage_benchmark.rs","protocols":["docs/B15_READ_PROTOCOL.md"],"evidence_directory":"results/b15","rerunnable_from_current_tree":false,"reason":"paired commits predate the extracted public Git history"}
+  ]
+}
