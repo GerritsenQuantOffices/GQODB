@@ -36,7 +36,8 @@ measure, and every file it writes is a plain `.gqodb` file you can inspect witho
 > no signed artifact and no format-stability promise yet: APIs, command-line tools and
 > file formats may change in any 0.x release (see [API stability](docs/API_STABILITY.md)
 > for what is and is not promised). The tests of the four crates of 0.1.0 pass on Linux and macOS in CI;
-> the newer crates `gqodb-lang` and `gqodb-cli` have been run on Linux only so far. Windows is
+> the newer crates `gqodb-lang` and `gqodb-cli` were run on Linux, and the whole workspace also locally on macOS (see
+> "Build it"), but not in CI. Windows is
 > not supported yet (one test fails there, see "Still not measured"). The GQODB engine — raw journal,
 > ledger and receipts, recovery, quality, features, causal query, ops and
 > connectors — is **not** in this repository and is not licensed by it.
@@ -102,7 +103,7 @@ results. B06 and B12 have no receipts and are marked as historical.
 |:---:|:---:|:---:|:---:|
 | crates | tests passed, 0 failed, 1 ignored | receipted result files | published release (0.1.0 preview) |
 
-<sub>Rust 1.96.0 · Linux x86_64 · 18 October 2026 · plus 7 doc-tests · default build and the `gqodb-blocks` `zstd-input` build both green · the two newer crates were not run on macOS</sub>
+<sub>Rust 1.96.0 · Linux x86_64 · 18 October 2026 · plus 7 doc-tests · default build and the `gqodb-blocks` `zstd-input` build both green · the workspace also ran locally on macOS: 206 passed, 1 ignored (see "Build it")</sub>
 
 </div>
 
@@ -191,7 +192,7 @@ verification scripts, Python 3 (standard library only). The tested toolchain is 
 1.96.0 on Linux x86_64. The declared minimum, Rust 1.85, was built and tested on Linux
 on 2026-10-18 with the committed `Cargo.lock` and has a CI job; newer dependency
 versions are not covered. The tests of the four crates of 0.1.0 also pass on macOS (GitHub Actions on 2026-10-18, and locally on Apple silicon with Rust 1.98.1);
-the two newer crates (`gqodb-lang`, `gqodb-cli`) have not been run on macOS yet. The Windows CI entry fails, see "Still not measured". The default build is pure Rust. The original B06
+the tests of the whole workspace also passed locally on macOS (Apple silicon, Rust 1.98.1, 18 October 2026, commit `6fa57f2`): 206 passed, 0 failed, 1 ignored; one test is Linux-only (macOS file systems reject non-UTF-8 file names). That run was not part of CI and not on the 1.85 minimum. The Windows CI entry fails, see "Still not measured". The default build is pure Rust. The original B06
 trade samples were zstd-compressed Parquet; to read inputs like that, build
 `gqodb-blocks` with `--features zstd-input`, which adds the native zstd library from
 crates.io. It only decodes inputs and is never one of the measured codecs.
