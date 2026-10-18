@@ -1,0 +1,310 @@
+{
+ "D1": {
+  "dataset": "D1",
+  "input": {
+   "host": "data.binance.vision",
+   "key": "data/spot/monthly/aggTrades/PAXGUSDT/PAXGUSDT-aggTrades-2025-10.zip",
+   "pinned_sha256": "de68061c03e6c7c5487dd805bf2b6b24348dee02ec33db1a4f33d2ecb8f1ad52",
+   "zip_bytes": 47374523,
+   "zip_sha256": "de68061c03e6c7c5487dd805bf2b6b24348dee02ec33db1a4f33d2ecb8f1ad52"
+  },
+  "variants": {
+   "v1": {
+    "python_reference": {
+     "digest": "f5b8d40cd5a0f1ab2837bea036540b1d294e4b7c988f16cd06160ee43866fd32",
+     "rows": 1048576,
+     "window": {
+      "digest": "a5206f5788f7ae458c82cc4b3df861f071d9213722c558da64d72db5b87eeebe",
+      "rows": 45
+     }
+    },
+    "references_agree": true,
+    "report": {
+     "block_rows": 32768,
+     "blocks": 32,
+     "details": {
+      "csv_bytes_consumed": 83353779,
+      "csv_consumed_sha256": "a7504e1b92dc659eae930158818eee990bbd7d3d63c79d9f084fab9ce63006c8",
+      "input": "csv"
+     },
+     "digest": "f5b8d40cd5a0f1ab2837bea036540b1d294e4b7c988f16cd06160ee43866fd32",
+     "rows": 1048576,
+     "source_bytes": 63227068,
+     "source_sha256": "f30017f2a64c1aa799abbfe2709e60867ae202698a077df024e7b762c6443754",
+     "symbol": "PAXGUSDT",
+     "variant": "v1",
+     "window": {
+      "digest": "a5206f5788f7ae458c82cc4b3df861f071d9213722c558da64d72db5b87eeebe",
+      "rows": 45
+     }
+    },
+    "source": "inputs/D1/source-v1.parquet"
+   },
+   "v2": {
+    "normalise_check": {
+     "float_path": "agrees_with_text_path"
+    },
+    "python_reference": {
+     "digest": "daf229a7e51be00227235ea8ddda14ea0e1e0bd02163314dc91d8c2d2e2618b2",
+     "rows": 1048576,
+     "window": {
+      "digest": "571f1e0c7fd08f4f057dec23ffd76d7d00e55f6c617258a27c0992fe62fa47fb",
+      "rows": 45
+     }
+    },
+    "references_agree": true,
+    "report": {
+     "block_rows": 32768,
+     "blocks": 32,
+     "details": {
+      "csv_bytes_consumed": 83353779,
+      "csv_consumed_sha256": "a7504e1b92dc659eae930158818eee990bbd7d3d63c79d9f084fab9ce63006c8",
+      "input": "csv"
+     },
+     "digest": "daf229a7e51be00227235ea8ddda14ea0e1e0bd02163314dc91d8c2d2e2618b2",
+     "rows": 1048576,
+     "source_bytes": 63227258,
+     "source_sha256": "fa72af78ab369d679bb1df8facb609521d9da38e2b2a8e8ace876b7ad3c89178",
+     "symbol": "PAXGUSDT",
+     "variant": "v2",
+     "window": {
+      "digest": "571f1e0c7fd08f4f057dec23ffd76d7d00e55f6c617258a27c0992fe62fa47fb",
+      "rows": 45
+     }
+    },
+    "source": "inputs/D1/source-v2.parquet"
+   }
+  }
+ },
+ "D2": {
+  "dataset": "D2",
+  "input": {
+   "host": "data.binance.vision",
+   "key": "data/spot/monthly/aggTrades/PAXGUSDT/PAXGUSDT-aggTrades-2026-02.zip",
+   "pinned_sha256": "effc512bdc63dcd1c023d1e00c55101f9ad93bd3002698c9965796e542881bd5",
+   "zip_bytes": 55531096,
+   "zip_sha256": "effc512bdc63dcd1c023d1e00c55101f9ad93bd3002698c9965796e542881bd5"
+  },
+  "variants": {
+   "v1": {
+    "python_reference": {
+     "digest": "1db13b02e0bc13b435322db16e3194e333172e579678bb326e093bf8bd86c866",
+     "rows": 1048576,
+     "window": {
+      "digest": "2cc3bc0ee1161e5027274c5051a18db13864790903baffc42231257676f00087",
+      "rows": 468
+     }
+    },
+    "references_agree": true,
+    "report": {
+     "block_rows": 32768,
+     "blocks": 32,
+     "details": {
+      "csv_bytes_consumed": 83389758,
+      "csv_consumed_sha256": "d7a2e65ecb0671aead3caf3ef04ef1cc9daf7f6911c1441e51074094fe692d60",
+      "input": "csv"
+     },
+     "digest": "1db13b02e0bc13b435322db16e3194e333172e579678bb326e093bf8bd86c866",
+     "rows": 1048576,
+     "source_bytes": 63227068,
+     "source_sha256": "e99cbfc6c8e8e06ceec21e96ebe03c001b2a2b5c2691ef30fa306640f57bace4",
+     "symbol": "PAXGUSDT",
+     "variant": "v1",
+     "window": {
+      "digest": "2cc3bc0ee1161e5027274c5051a18db13864790903baffc42231257676f00087",
+      "rows": 468
+     }
+    },
+    "source": "inputs/D2/source-v1.parquet"
+   },
+   "v2": {
+    "normalise_check": {
+     "float_path": "agrees_with_text_path"
+    },
+    "python_reference": {
+     "digest": "bf66781fa93a2e0234d237e3a5a2ff0a525edff6f5e744311240f0fa98475fc4",
+     "rows": 1048576,
+     "window": {
+      "digest": "07914a055096e612e801dd9f58978bf5dd4c1c9d9ee3a509aade2980c24108ad",
+      "rows": 468
+     }
+    },
+    "references_agree": true,
+    "report": {
+     "block_rows": 32768,
+     "blocks": 32,
+     "details": {
+      "csv_bytes_consumed": 83389758,
+      "csv_consumed_sha256": "d7a2e65ecb0671aead3caf3ef04ef1cc9daf7f6911c1441e51074094fe692d60",
+      "input": "csv"
+     },
+     "digest": "bf66781fa93a2e0234d237e3a5a2ff0a525edff6f5e744311240f0fa98475fc4",
+     "rows": 1048576,
+     "source_bytes": 63227258,
+     "source_sha256": "2ef1e3f935143f1def1137418436f94194e812b0e07d864bd3da471351591eb3",
+     "symbol": "PAXGUSDT",
+     "variant": "v2",
+     "window": {
+      "digest": "07914a055096e612e801dd9f58978bf5dd4c1c9d9ee3a509aade2980c24108ad",
+      "rows": 468
+     }
+    },
+    "source": "inputs/D2/source-v2.parquet"
+   }
+  }
+ },
+ "S1": {
+  "dataset": "S1",
+  "input": {
+   "host": "data.binance.vision",
+   "key": "data/spot/monthly/aggTrades/PAXGUSDT/PAXGUSDT-aggTrades-2025-10.zip",
+   "pinned_sha256": "de68061c03e6c7c5487dd805bf2b6b24348dee02ec33db1a4f33d2ecb8f1ad52",
+   "zip_bytes": 47374523,
+   "zip_sha256": "de68061c03e6c7c5487dd805bf2b6b24348dee02ec33db1a4f33d2ecb8f1ad52"
+  },
+  "variants": {
+   "v1": {
+    "python_reference": {
+     "digest": "b0a7300e42ad8e752f22b731ee842b344f0f47c3717091bdde010e7c3f2f977b",
+     "rows": 3132841,
+     "window": {
+      "digest": "df96761ab5e0d92cd24b1257f2bab8e6c97b743a656f433301b9885bb95b9208",
+      "rows": 2057
+     }
+    },
+    "references_agree": true,
+    "report": {
+     "block_rows": 32768,
+     "blocks": 96,
+     "details": {
+      "csv_bytes_consumed": 249066194,
+      "csv_consumed_sha256": "bea4c44d7786e382d16f191aaf881284cf9fcfb63cc3a3e243d78286f5f276c9",
+      "input": "csv"
+     },
+     "digest": "b0a7300e42ad8e752f22b731ee842b344f0f47c3717091bdde010e7c3f2f977b",
+     "rows": 3132841,
+     "source_bytes": 188903873,
+     "source_sha256": "ba50ed1e9b70d18f42555d8ff998da34fb694d48d21e9909711c82a5b82b7085",
+     "symbol": "PAXGUSDT",
+     "variant": "v1",
+     "window": {
+      "digest": "df96761ab5e0d92cd24b1257f2bab8e6c97b743a656f433301b9885bb95b9208",
+      "rows": 2057
+     }
+    },
+    "source": "inputs/S1/source-v1.parquet"
+   },
+   "v2": {
+    "normalise_check": {
+     "float_path": "agrees_with_text_path"
+    },
+    "python_reference": {
+     "digest": "02f9f029e714a4d24c872b0874dec9e8d5aa5f2c76eb6cd2e259ef6dc7837f33",
+     "rows": 3132841,
+     "window": {
+      "digest": "20f8a45625d9ca2eeccbb425f2d53f38f9278f6c876468e3fc79003decbac7cc",
+      "rows": 2057
+     }
+    },
+    "references_agree": true,
+    "report": {
+     "block_rows": 32768,
+     "blocks": 96,
+     "details": {
+      "csv_bytes_consumed": 249066194,
+      "csv_consumed_sha256": "bea4c44d7786e382d16f191aaf881284cf9fcfb63cc3a3e243d78286f5f276c9",
+      "input": "csv"
+     },
+     "digest": "02f9f029e714a4d24c872b0874dec9e8d5aa5f2c76eb6cd2e259ef6dc7837f33",
+     "rows": 3132841,
+     "source_bytes": 188904447,
+     "source_sha256": "dbdb0f4fb761c6c1702de3196abe81f238e8515cf3c430d0cbe930825f450a83",
+     "symbol": "PAXGUSDT",
+     "variant": "v2",
+     "window": {
+      "digest": "20f8a45625d9ca2eeccbb425f2d53f38f9278f6c876468e3fc79003decbac7cc",
+      "rows": 2057
+     }
+    },
+    "source": "inputs/S1/source-v2.parquet"
+   }
+  }
+ },
+ "S2": {
+  "dataset": "S2",
+  "input": {
+   "host": "data.binance.vision",
+   "key": "data/spot/monthly/aggTrades/PAXGUSDT/PAXGUSDT-aggTrades-2026-02.zip",
+   "pinned_sha256": "effc512bdc63dcd1c023d1e00c55101f9ad93bd3002698c9965796e542881bd5",
+   "zip_bytes": 55531096,
+   "zip_sha256": "effc512bdc63dcd1c023d1e00c55101f9ad93bd3002698c9965796e542881bd5"
+  },
+  "variants": {
+   "v1": {
+    "python_reference": {
+     "digest": "f9265c19583b3cad13e52093ca963d1a1a3f7e117befec870842e62fe81344b1",
+     "rows": 3653318,
+     "window": {
+      "digest": "eca20689efa0363d7f6a1c78c879fde8daec25fab9f579927185d80a91fbe896",
+      "rows": 66
+     }
+    },
+    "references_agree": true,
+    "report": {
+     "block_rows": 32768,
+     "blocks": 112,
+     "details": {
+      "csv_bytes_consumed": 290464115,
+      "csv_consumed_sha256": "bf21ebfdf3e38e734911cfc293b12d88c0d015a9b96b30ef1e39b96ca1ba83e6",
+      "input": "csv"
+     },
+     "digest": "f9265c19583b3cad13e52093ca963d1a1a3f7e117befec870842e62fe81344b1",
+     "rows": 3653318,
+     "source_bytes": 220287841,
+     "source_sha256": "dd5b555fe52651f97ac351b946ab59f4172e8da788092dd2112d23d3d01edcb5",
+     "symbol": "PAXGUSDT",
+     "variant": "v1",
+     "window": {
+      "digest": "eca20689efa0363d7f6a1c78c879fde8daec25fab9f579927185d80a91fbe896",
+      "rows": 66
+     }
+    },
+    "source": "inputs/S2/source-v1.parquet"
+   },
+   "v2": {
+    "normalise_check": {
+     "float_path": "agrees_with_text_path"
+    },
+    "python_reference": {
+     "digest": "cc759b5aba420ba863a69ab0014e35d3a576ec6eb0eec7f45f7869541f1180f6",
+     "rows": 3653318,
+     "window": {
+      "digest": "47c9517a714da3ee5b81808fff4945621e44dcb9d7c2464e9848c5731e797517",
+      "rows": 66
+     }
+    },
+    "references_agree": true,
+    "report": {
+     "block_rows": 32768,
+     "blocks": 112,
+     "details": {
+      "csv_bytes_consumed": 290464115,
+      "csv_consumed_sha256": "bf21ebfdf3e38e734911cfc293b12d88c0d015a9b96b30ef1e39b96ca1ba83e6",
+      "input": "csv"
+     },
+     "digest": "cc759b5aba420ba863a69ab0014e35d3a576ec6eb0eec7f45f7869541f1180f6",
+     "rows": 3653318,
+     "source_bytes": 220288511,
+     "source_sha256": "b1cf948db1bf107e8a1ecd5e2d88f3753a701475df07a8fd91ae04ad0eb207cc",
+     "symbol": "PAXGUSDT",
+     "variant": "v2",
+     "window": {
+      "digest": "47c9517a714da3ee5b81808fff4945621e44dcb9d7c2464e9848c5731e797517",
+      "rows": 66
+     }
+    },
+    "source": "inputs/S2/source-v2.parquet"
+   }
+  }
+ }
+}

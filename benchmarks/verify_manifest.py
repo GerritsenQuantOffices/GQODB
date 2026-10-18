@@ -26,7 +26,12 @@ def main() -> None:
         required.add(run["runner"])
         required.update(run["protocols"])
         prefix = run["evidence_directory"].rstrip("/") + "/"
-        if not any(path.startswith(prefix) for path in tracked):
+        if run.get("evidence_status") == "not_yet_measured":
+            # Registered but not yet run (B17 stage 1): runner and protocol must be tracked, the
+            # evidence directory does not exist yet. Remove the marker when results are committed.
+            if any(path.startswith(prefix) for path in tracked):
+                raise SystemExit(f"{run['id']}: evidence exists under {prefix}; drop evidence_status")
+        elif not any(path.startswith(prefix) for path in tracked):
             raise SystemExit(f"{run['id']}: no tracked evidence under {prefix}")
 
     missing = sorted(required - tracked)

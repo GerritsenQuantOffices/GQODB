@@ -107,4 +107,13 @@ print(f"receipts: {len(checks)} checked, {len(failed)} mismatches, "
       f"read -{s['read_ms']:.4f}%\n"
       f"B11 book profile vs dictionary-LZ4: {min(smaller):.1f}-{max(smaller):.1f}% smaller, "
       f"decode {min(slower):.1f}-{max(slower):.1f}% longer", file=sys.stderr)
-sys.exit(1 if failed or stale else 0)
+# B17 — public-data file-level benchmark. Directories results/b17-* are checked against their
+# receipts and recomputed from the raw samples; with none present this reports zero directories.
+sys.path.insert(0, str(ROOT / "benchmarks" / "public_trades"))
+import verify_b17  # noqa: E402
+
+b17_dirs, b17_failures = verify_b17.verify_all(str(ROOT))
+print(f"B17 evidence: {len(b17_dirs)} result directories, {len(b17_failures)} failures", file=sys.stderr)
+for failure in b17_failures:
+    print("  FAIL", failure, file=sys.stderr)
+sys.exit(1 if failed or stale or b17_failures else 0)

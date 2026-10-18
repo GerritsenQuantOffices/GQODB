@@ -5,7 +5,19 @@
     "crates/gqodb-blocks/prototype/examples/paired_benchmark.rs",
     "crates/gqodb-blocks/prototype/examples/real_benchmark.rs",
     "crates/gqodb-blocks/prototype/examples/market_benchmark.rs",
-    "crates/gqodb-store/prototype/examples/storage_benchmark.rs"
+    "crates/gqodb-store/prototype/examples/storage_benchmark.rs",
+    "crates/gqodb-store/prototype/examples/trades_convert.rs",
+    "crates/gqodb-store/prototype/examples/trades_candidate.rs",
+    "crates/gqodb-store/prototype/examples/support/public_trades.rs",
+    "benchmarks/public_trades/fetch.sh",
+    "benchmarks/public_trades/harness.py",
+    "benchmarks/public_trades/common.py",
+    "benchmarks/public_trades/stats.py",
+    "benchmarks/public_trades/report.py",
+    "benchmarks/public_trades/verify_b17.py",
+    "benchmarks/baselines/duckdb_adapter.py",
+    "benchmarks/baselines/clickhouse_adapter.py",
+    "benchmarks/baselines/install_tools.py"
   ],
   "runs": [
     {"id":"B01","runner":"crates/gqodb-blocks/prototype/src/main.rs","protocols":["docs/BLOCK_EXPERIMENT.md","docs/BLOCK_PROTOCOL.md"],"evidence_directory":"results/b01-20260907","rerunnable_from_current_tree":true},
@@ -14,6 +26,7 @@
     {"id":"B11","runner":"crates/gqodb-blocks/prototype/examples/market_benchmark.rs","protocols":["docs/B11_BOOK_COMPRESSION.md"],"evidence_directory":"results/b11","rerunnable_from_current_tree":true},
     {"id":"B12","runner":"crates/gqodb-store/prototype/examples/storage_benchmark.rs","protocols":["docs/B12_STORAGE_PROTOCOL.md"],"evidence_directory":"results/b12","rerunnable_from_current_tree":true},
     {"id":"B13","runner":"crates/gqodb-store/prototype/examples/storage_benchmark.rs","protocols":["docs/B13_READ_PROTOCOL.md"],"evidence_directory":"results/b13","rerunnable_from_current_tree":false,"reason":"paired commits predate the extracted public Git history"},
-    {"id":"B15","runner":"crates/gqodb-store/prototype/examples/storage_benchmark.rs","protocols":["docs/B15_READ_PROTOCOL.md"],"evidence_directory":"results/b15","rerunnable_from_current_tree":false,"reason":"paired commits predate the extracted public Git history"}
+    {"id":"B15","runner":"crates/gqodb-store/prototype/examples/storage_benchmark.rs","protocols":["docs/B15_READ_PROTOCOL.md"],"evidence_directory":"results/b15","rerunnable_from_current_tree":false,"reason":"paired commits predate the extracted public Git history"},
+    {"id":"B17","runner":"benchmarks/public_trades/harness.py","protocols":["docs/B17_PUBLIC_TRADES_PROTOCOL.md","docs/B17_PUBLIC_TRADES_PROTOCOL.sha256","docs/B17_PUBLIC_TRADES_ADDENDA.md","docs/BASELINE_LICENCES.md"],"evidence_directory":"results/b17-public-trades-20261017","rerunnable_from_current_tree":true}
   ]
 }

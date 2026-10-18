@@ -1,0 +1,223 @@
+{
+ "adapter_processes_max": 19780,
+ "adapter_processes_min": 8280,
+ "cells": [
+  {
+   "adapter_processes_max": 2967,
+   "adapter_processes_min": 1242,
+   "candidates": [
+    "gqodb",
+    "parquet-delta-bss-lz4",
+    "parquet-dictionary-lz4",
+    "parquet-delta-bss-snappy",
+    "parquet-delta-bss-brotli5",
+    "duckdb-native",
+    "duckdb-parquet-default",
+    "duckdb-parquet-matched",
+    "duckdb-parquet-zstd",
+    "clickhouse-default",
+    "clickhouse-tuned"
+   ],
+   "dataset": "D1",
+   "phases_per_candidate_round": [
+    "noop",
+    "write",
+    "read-range cold",
+    "read-full cold",
+    "read-range warm",
+    "read-full warm"
+   ],
+   "processes_per_round": 69,
+   "rounds": "3 warm-up + 15 measured (+ up to 25 repeats)",
+   "variant": "v1"
+  },
+  {
+   "adapter_processes_max": 3010,
+   "adapter_processes_min": 1260,
+   "candidates": [
+    "gqodb",
+    "parquet-delta-bss-lz4",
+    "parquet-dictionary-lz4",
+    "parquet-delta-bss-snappy",
+    "parquet-delta-bss-brotli5",
+    "duckdb-native",
+    "duckdb-parquet-default",
+    "duckdb-parquet-matched",
+    "duckdb-parquet-zstd",
+    "clickhouse-default",
+    "clickhouse-tuned"
+   ],
+   "dataset": "D1",
+   "phases_per_candidate_round": [
+    "noop",
+    "write",
+    "read-range cold",
+    "read-full cold",
+    "read-range warm",
+    "read-full warm"
+   ],
+   "processes_per_round": 70,
+   "rounds": "3 warm-up + 15 measured (+ up to 25 repeats)",
+   "variant": "v2"
+  },
+  {
+   "adapter_processes_max": 2967,
+   "adapter_processes_min": 1242,
+   "candidates": [
+    "gqodb",
+    "parquet-delta-bss-lz4",
+    "parquet-dictionary-lz4",
+    "parquet-delta-bss-snappy",
+    "parquet-delta-bss-brotli5",
+    "duckdb-native",
+    "duckdb-parquet-default",
+    "duckdb-parquet-matched",
+    "duckdb-parquet-zstd",
+    "clickhouse-default",
+    "clickhouse-tuned"
+   ],
+   "dataset": "D2",
+   "phases_per_candidate_round": [
+    "noop",
+    "write",
+    "read-range cold",
+    "read-full cold",
+    "read-range warm",
+    "read-full warm"
+   ],
+   "processes_per_round": 69,
+   "rounds": "3 warm-up + 15 measured (+ up to 25 repeats)",
+   "variant": "v1"
+  },
+  {
+   "adapter_processes_max": 3010,
+   "adapter_processes_min": 1260,
+   "candidates": [
+    "gqodb",
+    "parquet-delta-bss-lz4",
+    "parquet-dictionary-lz4",
+    "parquet-delta-bss-snappy",
+    "parquet-delta-bss-brotli5",
+    "duckdb-native",
+    "duckdb-parquet-default",
+    "duckdb-parquet-matched",
+    "duckdb-parquet-zstd",
+    "clickhouse-default",
+    "clickhouse-tuned"
+   ],
+   "dataset": "D2",
+   "phases_per_candidate_round": [
+    "noop",
+    "write",
+    "read-range cold",
+    "read-full cold",
+    "read-range warm",
+    "read-full warm"
+   ],
+   "processes_per_round": 70,
+   "rounds": "3 warm-up + 15 measured (+ up to 25 repeats)",
+   "variant": "v2"
+  },
+  {
+   "adapter_processes_max": 1935,
+   "adapter_processes_min": 810,
+   "candidates": [
+    "gqodb",
+    "parquet-delta-bss-lz4",
+    "parquet-dictionary-lz4",
+    "duckdb-native",
+    "duckdb-parquet-default",
+    "clickhouse-default",
+    "clickhouse-tuned"
+   ],
+   "dataset": "S1",
+   "phases_per_candidate_round": [
+    "noop",
+    "write",
+    "read-range cold",
+    "read-full cold",
+    "read-range warm",
+    "read-full warm"
+   ],
+   "processes_per_round": 45,
+   "rounds": "3 warm-up + 15 measured (+ up to 25 repeats)",
+   "variant": "v1"
+  },
+  {
+   "adapter_processes_max": 1978,
+   "adapter_processes_min": 828,
+   "candidates": [
+    "gqodb",
+    "parquet-delta-bss-lz4",
+    "parquet-dictionary-lz4",
+    "duckdb-native",
+    "duckdb-parquet-default",
+    "clickhouse-default",
+    "clickhouse-tuned"
+   ],
+   "dataset": "S1",
+   "phases_per_candidate_round": [
+    "noop",
+    "write",
+    "read-range cold",
+    "read-full cold",
+    "read-range warm",
+    "read-full warm"
+   ],
+   "processes_per_round": 46,
+   "rounds": "3 warm-up + 15 measured (+ up to 25 repeats)",
+   "variant": "v2"
+  },
+  {
+   "adapter_processes_max": 1935,
+   "adapter_processes_min": 810,
+   "candidates": [
+    "gqodb",
+    "parquet-delta-bss-lz4",
+    "parquet-dictionary-lz4",
+    "duckdb-native",
+    "duckdb-parquet-default",
+    "clickhouse-default",
+    "clickhouse-tuned"
+   ],
+   "dataset": "S2",
+   "phases_per_candidate_round": [
+    "noop",
+    "write",
+    "read-range cold",
+    "read-full cold",
+    "read-range warm",
+    "read-full warm"
+   ],
+   "processes_per_round": 45,
+   "rounds": "3 warm-up + 15 measured (+ up to 25 repeats)",
+   "variant": "v1"
+  },
+  {
+   "adapter_processes_max": 1978,
+   "adapter_processes_min": 828,
+   "candidates": [
+    "gqodb",
+    "parquet-delta-bss-lz4",
+    "parquet-dictionary-lz4",
+    "duckdb-native",
+    "duckdb-parquet-default",
+    "clickhouse-default",
+    "clickhouse-tuned"
+   ],
+   "dataset": "S2",
+   "phases_per_candidate_round": [
+    "noop",
+    "write",
+    "read-range cold",
+    "read-full cold",
+    "read-range warm",
+    "read-full warm"
+   ],
+   "processes_per_round": 46,
+   "rounds": "3 warm-up + 15 measured (+ up to 25 repeats)",
+   "variant": "v2"
+  }
+ ],
+ "profile": "official"
+}

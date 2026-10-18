@@ -1,6 +1,6 @@
 {
   "redacted_on": "2026-09-19",
-  "what": "Location strings only. No measurement, count, timing, byte size or verdict was changed.",
+  "what": "Location strings only for the files of the redaction of 2026-09-19. No measurement, count, timing, byte size or verdict was changed. A later, separate correction of wording (2026-10-18) is described under text_corrections; it changed no measurement, count, timing, byte size or verdict either.",
   "replacements": [
     {
       "was": "private capture mount and collector host prefix",
@@ -19,6 +19,11 @@
       "now": "input://parquet/"
     }
   ],
+  "text_corrections": {
+    "corrected_on": "2026-10-18",
+    "what": "Wording of one sealed result file. results/b17-public-trades-20261017/ASSESSMENT.md was reworded after it had been sealed by its receipt: the description of a dropped optional baseline and of the concurrent fuzz job (it was this release's fuzz campaign), the attribution of the write-memory loss to the benchmark adapter path, the count of comparisons (864), the numbers and consequences of addendum A-004 (17 to 4 flagged samples; which cells would have been UNDERPOWERED under the registered rules), and added notes on ClickHouse range-read noise and the secondary CPU-time loss. samples.json, summary.json, plan.json and inputs.json were not touched and still match the receipt.",
+    "receipt_rule": "The receipt keeps the hash recorded at run time. The file is listed in files with that original hash and the hash of the public copy; results/verify_public_evidence.py and benchmarks/public_trades/verify_b17.py check both."
+  },
   "receipts": "BUILD_RECEIPTS.json files keep the hashes recorded at run time. A pinned file that was redacted is listed here with that original hash and the hash of the public copy; the unredacted originals stay in the private development repository.",
   "files": [
     {
@@ -183,6 +188,12 @@
       "original_sha256": "ad0306047638a53fdd145a9de9c3a0ac430e9b2a0ca8b58ab0f9d8233509fe56",
       "public_sha256": "0f73fc0b93ca8adf1ef54b6b1c61d8d6b161a27d8b9bd479aa7de6975f712b32",
       "pinned_by": "results/b15/BUILD_RECEIPTS.json"
+    },
+    {
+      "path": "results/b17-public-trades-20261017/ASSESSMENT.md",
+      "original_sha256": "a671d74ce13d642a3a2e18150dd00814faf18a0082a8fa3710b51c18316bb467",
+      "public_sha256": "129f28bb1f94226d082cc8468d73ec1ba040ef48c02d010f04bea5a56911ed82",
+      "pinned_by": "results/b17-public-trades-20261017/BUILD_RECEIPTS.json"
     }
   ]
 }
