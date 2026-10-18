@@ -84,6 +84,9 @@ reported. At most 20 errors are written, followed by one line `... and <n> more`
 than 120 characters is cut around the caret (`...` marks the cut side). The exit code is 2 and nothing
 runs. After that the commands run in order and the run stops at the first one that fails, with that
 command's exit code.
+A pipe or the interactive loop works line by line instead: each line is parsed and run before the next is read.
+So for the text `quit` followed by a line that does not parse, `gqodb run` stops with exit code 2 before it reaches
+`quit` (the whole script is parsed first), while a pipe stops at `quit` with exit code 0.
 `use clock` and `use path` last until the end of the run; they are not kept between runs. A script
 file, one command line given to the binary, or one line of the interactive loop may not be longer than
 1 MiB (1,048,576 bytes). A script file and a line of the interactive loop are read only up to that size plus
@@ -457,7 +460,8 @@ file is untouched. If the run fails after it created the file (an error with exi
 damaged file without `--skip-bad`, a write error), the run removes the file it created, so no partial result
 stays behind and the command can be repeated. The file stays when the run finished: also when the result is
 truncated (with `--strict`, exit code 3) and when `--skip-bad` skipped files (exit code 1, the notice is on
-standard error). A file takes the result of one command:
+standard error). The file is removed only when the run itself ends with an error: a run that is killed by a signal
+(SIGKILL) or cut off by a power loss while it writes can leave a partial file. A file takes the result of one command:
 a command line or script with more than one `show` or `explain`, and the interactive loop, are refused
 before anything is read or written (`error[E-SYNTAX]: --out takes exactly one show command`, exit code 2).
 `explain` ignores `--out`. The footer and every error go to standard error.
@@ -474,7 +478,8 @@ before anything is read or written (`error[E-SYNTAX]: --out takes exactly one sh
   section 4);
 - one `-- could not read <file>: <reason>` per file that `--skip-bad` skipped;
 - `-- excluded: <n> row(s) without a <clock> value`, when the empty-clock rule dropped rows;
-- `-- last: <n> row(s) without a <clock> value`, when `order` put rows with an empty value last;
+- `-- last: <n> row(s) without a <clock> value`, when `order` put rows with an empty value last (the count covers
+  all rows that were ordered, including rows that a later `take` does not show);
 - `-- truncated: <which budget> (limits: ...)`, when a budget stopped the read.
 
 **Damaged files.** A file that cannot be read, or a block that does not decode, is an E-FILE error with
@@ -621,6 +626,12 @@ are known flaws or rough edges, not design. This list changes when they are fixe
   count over the rows scanned before that point only.
 - **`clock=` without `range=` and without `order` has no effect and says nothing.** In the keyword form,
   `show stream=trades symbol=A clock=source path=./d` reads every row, and the footer says `no time range`.
+- **A hard link is read as a second file.** Two names for the same file in one directory (made with `ln`, not
+  `ln -s`) are two regular files: both are read and their rows appear twice, without a notice. Symbolic links
+  are de-duplicated and reported (section 4); hard links are not detected.
+- **The `-- last:` count includes rows that `take` does not show.** It counts the rows without a value on the
+  order clock among all rows that were ordered, so `... | order on source desc | take 1` can show one row and
+  still report `-- last: 1 row without a source value`.
 - **Names that do not fit are ignored silently.** In a directory, a file whose name does not end in
   `.gqodb.tick` or `.gqodb.ob`, and everything inside subdirectories, is not listed or counted anywhere.
 - **E-VENUE is never produced.** A venue that does not match gives skipped files and an empty result.

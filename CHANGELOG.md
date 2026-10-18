@@ -19,9 +19,10 @@ convention: a change that is not backwards-compatible bumps the minor version, a
   (a new file, never overwritten). It reads files only.
 - The command language: `show`, `explain`, `use`, `help` and `quit`, with the streams `trades`, `quotes`
   and `book`, an explicit clock for every range (`available`, `received`, `source`, `sequence`; no default)
-  and the steps `take`, `skip`, `columns` and `order`. Ten error codes. The errors found while parsing and
-  planning point at the place in the source; those found while running (an unreadable file, a budget flag,
-  a path) do not, and `E-VENUE` is defined but never produced. The
+  and the steps `take`, `skip`, `columns` and `order`. Ten error codes. The errors that the parser and the
+  planner report for a command text point at the place in the source; the messages of the command line itself
+  (an unknown flag, input over 1 MiB, the `--out` rule, `run` without one file) and the errors found while
+  running (an unreadable file, a budget flag, a path) have no place, and `E-VENUE` is defined but never produced. The
   words `as`, `provenance`, `quality`, `uncertainty`, `join`, `asof`, `import`, `capture` and `ledger`
   are reserved for the GQODB engine and give `E-ENGINE`. Reference: `docs/LANGUAGE.md`, which lists the
   flaws that are known. A 0.x preview with no stability promise (see `docs/API_STABILITY.md`).

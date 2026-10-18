@@ -44,10 +44,10 @@ targets and for `lang_parse`), 10 s per input, 4096 MB RSS and 4096 MB per alloc
 60 s per target on pull requests with the pinned `cargo-fuzz` 0.13.2 (a weekly 600 s run is
 scheduled); that workflow has not been run on GitHub yet.
 
-Seeds (`fuzz/corpus/`, 839,335 bytes in 252 files) for the 15 storage and codec targets are generated from the
-repository's own synthetic fixtures (`gqodb_blocks::data::generate`, `gqodb_codec::fixture`, a fixed-seed
-generator); the 38 seeds of `lang_parse` were chosen by hand from the parser and golden tests and the help
-text. They contain no market data. Since fix 9 the `real_*` and `store_*` corpora also hold the 60 KB reproducer of that
+Seeds (`fuzz/corpus/`): for the 15 storage and codec targets the tracked seed corpus is 214 files and 837,979
+bytes, generated from the repository's own synthetic fixtures (`gqodb_blocks::data::generate`,
+`gqodb_codec::fixture`, a fixed-seed generator). The 38 seeds of `lang_parse` (1,356 bytes) were chosen by hand
+from the parser and golden tests and the help text; together that is 252 files and 839,335 bytes. They contain no market data. Since fix 9 the `real_*` and `store_*` corpora also hold the 60 KB reproducer of that
 finding (as a block, and as a one-block segment) so that the refusal path is reached from the first
 execution. `fuzz/dict/gqodb.dict` holds the magic strings and metadata keys.
 
