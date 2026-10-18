@@ -1,6 +1,9 @@
 <div align="center">
 
-<img alt="GQODB" src="docs/assets/gqodb-wordmark.png" width="190">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/gqodb-logo-cream.svg">
+  <img alt="GQODB" src="docs/assets/gqodb-logo-ink.svg" width="260">
+</picture>
 
 # Checkable in an afternoon
 
@@ -8,8 +11,8 @@
 
 <img src="docs/assets/badge-status.svg" alt="status: prototype">
 <img src="docs/assets/badge-licence.svg" alt="licence: Apache-2.0">
-<img src="docs/assets/badge-tests.svg" alt="tests: 76 passed, 0 failed (local run, no CI)">
-<img src="docs/assets/badge-evidence.svg" alt="evidence: 28 receipted files (local check, no CI)">
+<img src="docs/assets/badge-tests.svg" alt="tests: 76 passed on Linux and macOS">
+<img src="docs/assets/badge-evidence.svg" alt="evidence: 28 receipted files">
 
 [Install](#build-it) · [Formats](#formats) · [Benchmarks](#benchmarks) ·
 [Evidence](#evidence) · [Crates](#crates) · [Licence](#licence-and-the-engine)
@@ -18,9 +21,9 @@
 
 ---
 
-GQODB stores market data the way research actually needs it: every record keeps the
-bytes as they arrived, the moment they arrived, and the evidence for the clock that
-measured it. This repository is the part of GQODB worth giving away — **the codec**:
+GQODB is built to store market data the way research actually needs it: every record
+keeps the bytes as they arrived, the moment they arrived, and the evidence for the clock
+that measured it. This repository is the part of GQODB worth giving away — **the codec**:
 the exact types, the lossless tick and order-book compression, the indexed segment
 files, the format facade that reads them, and the benchmark protocols and evidence
 behind the numbers below.
@@ -32,7 +35,8 @@ measure, and every file it writes is a plain `.gqodb` file you can inspect witho
 > **A prototype, released as source: 0.1.0 preview.** There is no crates.io release,
 > no signed artifact and no format-stability promise yet: APIs, command-line tools and
 > file formats may change in any 0.x release (see [API stability](docs/API_STABILITY.md)
-> for what is and is not promised). The GQODB engine — raw journal,
+> for what is and is not promised). The tests pass on Linux and macOS in CI; Windows is
+> not supported yet (one test fails there, see "Still not measured"). The GQODB engine — raw journal,
 > ledger and receipts, recovery, quality, features, causal query, ops and
 > connectors — is **not** in this repository and is not licensed by it.
 
@@ -92,7 +96,7 @@ results. B06 and B12 have no receipts and are marked as historical.
 
 | 4 | 76 | 28 | 1 |
 |:---:|:---:|:---:|:---:|
-| crates | tests passed, 0 failed, 0 ignored | receipted result files | published releases |
+| crates | tests passed, 0 failed, 0 ignored | receipted result files | published release (0.1.0 preview) |
 
 <sub>Rust 1.96.0 · Linux x86_64 · 18 October 2026 · plus 7 doc-tests · default build and `zstd-input` build both green</sub>
 
@@ -279,9 +283,11 @@ GQODB); the verdict uses a 2% band for bytes, 5% for time and 10% for memory.
 smallest layout and, with the exceptions below, the fastest on write, full read and the time-window read, but:
 the peak memory of the write is 2.2 to 4.3 times that of the DuckDB Parquet writers on the two slices (4.24 and 4.18 against
 the matched LZ4 writer in the table) and 4.5 to 5.0 times that of the DuckDB default Parquet writer on the full months (1.6 to
-2.1 times DuckDB native). That loss belongs to the measured adapter path and not to a property of the GQODB format: the Rust
+2.1 times DuckDB native). That loss most likely belongs to the measured adapter path and not to the GQODB format: the Rust
 adapter reads the whole source table into memory before writing, for every Rust candidate including the Rust Parquet
-writers (which therefore sit at the same level), while DuckDB streams its input. Further: full-read memory on the full months
+writers (which therefore sit at the same level), while DuckDB streams its input. This is an inference from that
+comparison; a streaming write path for GQODB has not been built or measured, so how the writer behaves on much larger
+inputs is open. Further: full-read memory on the full months
 is 2.5 to 3.0 times that of the ClickHouse engine process (not measured like for like); the warm range read against
 ClickHouse is inconclusive in 7 of 16 cells, none worse, with point estimates from 0.33 to 1.24 (1.24 for S2/v1 against `clickhouse-default` is
 no win; the window holds only 45 and 468 rows, and the ClickHouse operation time is wall time minus process start-up floored
@@ -450,7 +456,7 @@ benchmarks ran on, replaced by `capture://bybit/raw/`, `input://parquet/` and
 the hashes recorded at run time; [`PUBLIC_REDACTION.json`](results/PUBLIC_REDACTION.json)
 pairs each redacted file's original hash with the hash of its public copy, and the
 verifier checks both. The unredacted originals stay in the private development
-repository. Recorded commit ids likewise refer to that private history.
+repository. Commit ids recorded in the older receipts likewise refer to that private history; the run-2 receipt of B17 names a commit that is in this one.
 
 **A second, textual correction, stated too.** On 18 October 2026
 `results/b17-public-trades-20261017/ASSESSMENT.md` was reworded after it had been sealed:
@@ -502,7 +508,10 @@ and [SECURITY](SECURITY.md).
 
 <div align="center">
 
-<img alt="GQODB" src="docs/assets/gqodb-wordmark.png" width="90">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/gqo-mark-cream.svg">
+  <img alt="GQO" src="docs/assets/gqo-mark-ink.svg" width="90">
+</picture>
 
 <sub>
 
