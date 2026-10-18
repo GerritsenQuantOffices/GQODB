@@ -33,6 +33,11 @@ def main() -> None:
                 raise SystemExit(f"{run['id']}: evidence exists under {prefix}; drop evidence_status")
         elif not any(path.startswith(prefix) for path in tracked):
             raise SystemExit(f"{run['id']}: no tracked evidence under {prefix}")
+        # A run may keep earlier result directories (B17: run 1 next to the main run 2).
+        for extra in run.get("additional_evidence_directories", []):
+            extra_prefix = extra.rstrip("/") + "/"
+            if not any(path.startswith(extra_prefix) for path in tracked):
+                raise SystemExit(f"{run['id']}: no tracked evidence under {extra_prefix}")
 
     missing = sorted(required - tracked)
     if missing:

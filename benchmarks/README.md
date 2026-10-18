@@ -15,7 +15,7 @@ equivalent local input. Synthetic B01/B02 runs need no external dataset.
 | B12 | `storage_benchmark` example | `docs/B12_STORAGE_PROTOCOL.md` | `results/b12/` | user-supplied Bybit book capture; historical input not redistributed |
 | B13 | `storage_benchmark` read-only mode | `docs/B13_READ_PROTOCOL.md` | `results/b13/` | historical paired commits and unchanged B12 artifacts named in receipts |
 | B15 | `storage_benchmark` read-only and full modes | `docs/B15_READ_PROTOCOL.md` | `results/b15/` | historical paired commits and unchanged B12 artifacts named in receipts |
-| B17 | `benchmarks/public_trades/harness.py` with the `trades_convert` and `trades_candidate` examples | `docs/B17_PUBLIC_TRADES_PROTOCOL.md` (hash-pinned) | `results/b17-public-trades-20261017/` (hash-checked receipt) | public Binance Vision archives, fetched and checksum-verified by `fetch.sh`; nothing is redistributed |
+| B17 | `benchmarks/public_trades/harness.py` with the `trades_convert` and `trades_candidate` examples | `docs/B17_PUBLIC_TRADES_PROTOCOL.md` (hash-pinned) | `results/b17-public-trades-20261018/` (main result, run 2 on the released commit) and `results/b17-public-trades-20261017/` (run 1, earlier commit); both with hash-checked receipts | public Binance Vision archives, fetched and checksum-verified by `fetch.sh`; nothing is redistributed |
 
 `./benchmarks/run.sh verify` checks every published result covered by a receipt and
 recomputes the B11, B15 and B17 summaries from the stored results (B06 in part). `./benchmarks/run.sh synthetic-smoke`

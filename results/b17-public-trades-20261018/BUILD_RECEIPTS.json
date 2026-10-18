@@ -1,0 +1,78 @@
+{
+  "environment": {
+    "cargo_lock_sha256": "70a117e762803aafaa6cbb444e1386d246ccf88341f94a0daaf9f61ba737926a",
+    "commit": "c07fbde0e869aa13ed178636eb39e564c9b5898c",
+    "commit_dirty": false,
+    "cpu_model_class": "Intel Xeon CPU E5-2690 v4 class",
+    "filesystem": {
+      "rotational": false,
+      "type": "ext4"
+    },
+    "foreign_cpus": [
+      6,
+      20
+    ],
+    "harness_cpu": 11,
+    "kernel": "7.0.0-31-generic",
+    "pinned_cpu": 10,
+    "python": "3.14.4",
+    "rustc": "rustc 1.96.0 (ac68faa20 2026-05-25)",
+    "sibling_cpu": 24,
+    "tools": {
+      "clickhouse": "ClickHouse local version 26.3.54.6 (official build).",
+      "duckdb": "1.5.6"
+    }
+  },
+  "experiment": "B17",
+  "generated_utc": "2026-10-18T11:41:08Z",
+  "inputs": {
+    "D1": {
+      "host": "data.binance.vision",
+      "key": "data/spot/monthly/aggTrades/PAXGUSDT/PAXGUSDT-aggTrades-2025-10.zip",
+      "pinned_sha256": "de68061c03e6c7c5487dd805bf2b6b24348dee02ec33db1a4f33d2ecb8f1ad52",
+      "zip_bytes": 47374523,
+      "zip_sha256": "de68061c03e6c7c5487dd805bf2b6b24348dee02ec33db1a4f33d2ecb8f1ad52"
+    },
+    "D2": {
+      "host": "data.binance.vision",
+      "key": "data/spot/monthly/aggTrades/PAXGUSDT/PAXGUSDT-aggTrades-2026-02.zip",
+      "pinned_sha256": "effc512bdc63dcd1c023d1e00c55101f9ad93bd3002698c9965796e542881bd5",
+      "zip_bytes": 55531096,
+      "zip_sha256": "effc512bdc63dcd1c023d1e00c55101f9ad93bd3002698c9965796e542881bd5"
+    },
+    "S1": {
+      "host": "data.binance.vision",
+      "key": "data/spot/monthly/aggTrades/PAXGUSDT/PAXGUSDT-aggTrades-2025-10.zip",
+      "pinned_sha256": "de68061c03e6c7c5487dd805bf2b6b24348dee02ec33db1a4f33d2ecb8f1ad52",
+      "zip_bytes": 47374523,
+      "zip_sha256": "de68061c03e6c7c5487dd805bf2b6b24348dee02ec33db1a4f33d2ecb8f1ad52"
+    },
+    "S2": {
+      "host": "data.binance.vision",
+      "key": "data/spot/monthly/aggTrades/PAXGUSDT/PAXGUSDT-aggTrades-2026-02.zip",
+      "pinned_sha256": "effc512bdc63dcd1c023d1e00c55101f9ad93bd3002698c9965796e542881bd5",
+      "zip_bytes": 55531096,
+      "zip_sha256": "effc512bdc63dcd1c023d1e00c55101f9ad93bd3002698c9965796e542881bd5"
+    }
+  },
+  "profile": "official",
+  "protocol": "docs/B17_PUBLIC_TRADES_PROTOCOL.md",
+  "protocol_sha256": "421966afb82a5fd21293287e042bbde45415fb2295bee33e0c26e66766fe0b98",
+  "purpose": "published run",
+  "result_sha256": {
+    "ASSESSMENT.md": "728553c407d25b8b328546f4b0cbf7a5774ed433f2afe2607402bbf069260688",
+    "inputs.json": "94542c77df94b4da8bf06460a3d5c65776702d5be41f4e71f449a484eeb45f85",
+    "plan.json": "2b372d8039c30235ba68783425825adeafb6cbc95acd03e6c5af2604ab4bf4b3",
+    "samples.json": "843dab41697636575ab97ebdc924ac8f3fd275dc6694c0c37f8bab061b114890",
+    "summary.json": "217a7318814096ce570a7e648d50c2b88211f852f736aca968e9bc8ca6b9d07b"
+  },
+  "settings": {
+    "block_bootstrap": 3,
+    "extra_rounds_allowed": 25,
+    "measured": 15,
+    "resamples": 10000,
+    "seed": 20261017,
+    "warmups": 3
+  },
+  "skipped_candidates": []
+}

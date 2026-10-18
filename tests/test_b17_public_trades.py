@@ -770,11 +770,38 @@ class Resume(unittest.TestCase):
 
 
 class RepositoryState(unittest.TestCase):
-    def test_existing_evidence_still_verifies_and_no_b17_directory_is_claimed_yet(self):
+    def test_both_result_directories_verify(self):
+        """Run 1 (earlier commit) and run 2 (main result, released commit) are both checked."""
         results, failures = verify_b17.verify_all(ROOT)
         self.assertEqual(failures, [])
+        names = sorted(os.path.basename(d) for d in results)
+        self.assertEqual(names, ["b17-public-trades-20261017", "b17-public-trades-20261018"])
         for directory in results:
             self.assertTrue(os.path.isfile(os.path.join(directory, "BUILD_RECEIPTS.json")))
+
+    def test_manifest_declares_run_2_as_main_and_run_1_as_additional(self):
+        manifest = json.load(open(os.path.join(ROOT, "benchmarks", "manifest.json")))
+        run = next(r for r in manifest["runs"] if r["id"] == "B17")
+        self.assertEqual(run["evidence_directory"], "results/b17-public-trades-20261018")
+        self.assertEqual(run["additional_evidence_directories"], ["results/b17-public-trades-20261017"])
+        for directory in [run["evidence_directory"]] + run["additional_evidence_directories"]:
+            self.assertTrue(os.path.isdir(os.path.join(ROOT, directory)))
+
+    def test_run_2_receipt_names_a_commit_of_this_history_and_a_clean_tree(self):
+        receipt = json.load(open(os.path.join(ROOT, "results", "b17-public-trades-20261018", "BUILD_RECEIPTS.json")))
+        env = receipt["environment"]
+        self.assertFalse(env["commit_dirty"])
+        probe = subprocess.run(["git", "cat-file", "-e", env["commit"] + "^{commit}"], cwd=ROOT, capture_output=True)
+        if probe.returncode != 0:
+            self.skipTest("the measured commit is not available in this checkout (shallow clone?)")
+        ancestor = subprocess.run(["git", "merge-base", "--is-ancestor", env["commit"], "HEAD"], cwd=ROOT, capture_output=True)
+        self.assertEqual(ancestor.returncode, 0, "the receipt commit must be an ancestor of HEAD")
+
+    def test_run_2_assessment_is_clean(self):
+        text = open(os.path.join(ROOT, "results", "b17-public-trades-20261018", "ASSESSMENT.md")).read()
+        self.assertNotRegex(text, r"(?i)another (agent|project)|coordinator|fuzz(ing)? (job|campaign)")
+        self.assertIn("Binance Vision", text)
+        self.assertIn("UNDERPOWERED", text)
 
     def test_protocol_is_pinned(self):
         pinned = open(os.path.join(ROOT, "docs", "B17_PUBLIC_TRADES_PROTOCOL.sha256")).read().split()[0]
