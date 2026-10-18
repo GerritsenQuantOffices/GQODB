@@ -3,7 +3,7 @@
 use bytes::Bytes;
 use gqodb_blocks::{
     Codec,
-    real::{self, Mode},
+    real::{self, MAX_DECODED_STRING_BYTES, Mode},
 };
 
 fn with_crc(mut bytes: Vec<u8>) -> Vec<u8> {
@@ -269,15 +269,15 @@ fn duplicate_column_names_with_different_types_are_an_error_not_a_panic() {
     assert!(real::decode(Bytes::from(bytes), Mode::ParquetLz4).is_ok());
 }
 
-/// OPEN FINDING, owner decision pending (docs/FUZZING.md, "Open finding"). A ~60 KB block whose
-/// dictionary string is 60 000 bytes long and whose column holds 1 048 576 rows of it makes
-/// `real::decode` ask for rows x string length = ~60 GB before checking any bound; the checked layers
-/// (`gqodb-codec`, `Reader::read_block_bounded`) refuse the same bytes. Ignored because, until a
-/// decoded-size cap exists, running it aborts the process. If you run it, run it under a memory
-/// limit: `ulimit -v 4000000; cargo test -p gqodb-blocks --test malformed -- --ignored`.
-#[test]
-#[ignore = "open finding: unchecked real::decode allocates rows x longest dictionary string"]
-fn unchecked_decode_must_not_allocate_rows_times_string_length() {
+/// Unchecked layer, finding "string expansion" (docs/FUZZING.md, fixed finding 9). A ~60 KB block
+/// whose dictionary string is 60 000 bytes long and whose column holds 1 048 576 rows of it made
+/// `real::decode` ask for rows x string length = 62 914 560 000 bytes before checking any bound
+/// (`memory allocation of 62914560000 bytes failed`, an abort). Decoding now refuses a block whose
+/// decoded strings exceed 128 MiB (`MAX_DECODED_STRING_BYTES`) before it allocates them. The
+/// message is asserted so that the refusal is for this reason and not an unrelated one. Without the
+/// fix this test aborts the process; run it under a memory limit to see that:
+/// `ulimit -v 8000000; cargo test -p gqodb-blocks --test malformed string`.
+fn forged_string_bomb(mode: Mode, string_bytes: usize) -> Vec<u8> {
     use arrow_array::{ArrayRef, Int64Array, LargeStringArray, RecordBatch};
     use gqodb_blocks::data::MAX_ROWS;
     use std::sync::Arc;
@@ -292,14 +292,68 @@ fn unchecked_decode_must_not_allocate_rows_times_string_length() {
         ),
     ])
     .unwrap();
-    let block = real::encode(&batch, Mode::Gqodb).unwrap();
+    let block = real::encode(&batch, mode).unwrap();
     let meta_len = u32::from_le_bytes(block[8..12].try_into().unwrap()) as usize;
     let meta = String::from_utf8(block[12..12 + meta_len].to_vec()).unwrap();
-    let meta = meta.replace("\"BTC\"", &format!("\"{}\"", "A".repeat(60_000)));
+    let meta = meta.replace("\"BTC\"", &format!("\"{}\"", "A".repeat(string_bytes)));
     let mut forged = block[..8].to_vec();
     forged.extend_from_slice(&(meta.len() as u32).to_le_bytes());
     forged.extend_from_slice(meta.as_bytes());
     forged.extend_from_slice(&block[12 + meta_len..block.len() - 4]);
-    forged = with_crc(forged);
-    assert!(real::decode(Bytes::from(forged), Mode::Gqodb).is_err());
+    with_crc(forged)
+}
+
+fn assert_string_limit(error: anyhow::Error) {
+    let message = format!("{error:#}");
+    assert!(
+        message.contains("decoded string bytes exceed the limit of 134217728 bytes"),
+        "refused for another reason: {message}"
+    );
+}
+
+#[test]
+fn unchecked_decode_must_not_allocate_rows_times_string_length() {
+    for mode in [Mode::Gqodb, Mode::GqodbBook] {
+        let forged = forged_string_bomb(mode, 60_000);
+        assert!(forged.len() < 100_000, "the bomb is a small block");
+        let error = real::decode(Bytes::from(forged), mode).unwrap_err();
+        assert_string_limit(error);
+    }
+}
+
+/// The same block as a stored file (`examples/string_bomb` in the fuzz crate writes it), through
+/// every unchecked decoding entry point of this crate: `real::decode`, a reused `Decoder` and the
+/// batch decoder with one and two workers.
+#[test]
+fn stored_string_bomb_is_refused_by_every_unchecked_entry_point() {
+    let bomb: &'static [u8] = include_bytes!("regressions/string_bomb_60kb.bin");
+    assert_string_limit(real::decode(Bytes::from_static(bomb), Mode::Gqodb).unwrap_err());
+    let mut decoder = real::Decoder::default();
+    for _ in 0..2 {
+        assert_string_limit(
+            decoder
+                .decode(Bytes::from_static(bomb), Mode::Gqodb)
+                .unwrap_err(),
+        );
+    }
+    let blocks = [Bytes::from_static(bomb), Bytes::from_static(bomb)];
+    for workers in [1, 2] {
+        let error = gqodb_blocks::batch::Options { workers }
+            .decode(&blocks, Mode::Gqodb)
+            .unwrap_err();
+        assert_string_limit(error);
+    }
+}
+
+/// One byte per row over the limit is refused: 129 bytes x 1 048 576 rows = 128 MiB + 1 048 576
+/// bytes. The refusal is before the allocation, so this test needs no 128 MiB; the exact boundary
+/// (limit - 1, limit, limit + 1) is covered without allocation by the unit tests in `real.rs`
+/// (`restore_tests`).
+#[test]
+fn one_byte_per_row_over_the_limit_is_refused() {
+    use gqodb_blocks::data::MAX_ROWS;
+    let per_row = (MAX_DECODED_STRING_BYTES / MAX_ROWS as u64) as usize + 1;
+    assert_eq!(per_row, 129);
+    let over = forged_string_bomb(Mode::Gqodb, per_row);
+    assert_string_limit(real::decode(Bytes::from(over), Mode::Gqodb).unwrap_err());
 }

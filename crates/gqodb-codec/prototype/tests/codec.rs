@@ -210,3 +210,10 @@ fn dictionary_expansion_preflight_rejects_bomb_before_native_decode() {
     let error = decode(Bytes::from(bytes), None).unwrap_err().to_string();
     assert!(error.contains("expansion"), "{error}");
 }
+
+/// The unchecked layer's limit on decoded string bytes is the facade's 128 MiB, not a second number.
+#[test]
+fn string_limit_of_the_unchecked_layer_equals_the_facade_limit() {
+    assert_eq!(real::MAX_DECODED_STRING_BYTES, MAX_DECODED_BYTES as u64);
+    assert_eq!(MAX_DECODED_BYTES, MAX_BLOCK_BYTES);
+}

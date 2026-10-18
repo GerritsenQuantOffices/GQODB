@@ -15,6 +15,60 @@ use parquet::{
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, sync::Arc};
 
+/// Upper bound on the decoded string bytes of one real block, summed over all `LargeUtf8`
+/// columns: the sum, over the rows that are valid, of the length of the dictionary string the
+/// row refers to. [`decode`] and [`Decoder::decode`] refuse a block above it before they allocate
+/// any string memory, and [`encode`] refuses a batch above it so that everything the encoder
+/// writes can be decoded again. It is the same 128 MiB as `gqodb_codec::MAX_DECODED_BYTES` and
+/// the store's frame limit. Without it, a block of a few tens of KB whose dictionary holds one
+/// long string and whose column is a long run of that string asked for `rows x string length`
+/// bytes (62,914,560,000 for a 60 KB block).
+pub const MAX_DECODED_STRING_BYTES: u64 = 128 * 1024 * 1024;
+
+fn string_limit_error(limit: u64) -> anyhow::Error {
+    anyhow::anyhow!(
+        "decoded string bytes exceed the limit of {limit} bytes ({} MiB)",
+        limit >> 20
+    )
+}
+
+/// Decoded string bytes of one dictionary-coded column: the sum of the dictionary entry lengths
+/// over the valid rows (all rows without a validity vector). Pure arithmetic, nothing is
+/// allocated; saturating, so it cannot wrap; an error when the sum is above `budget`, when an id
+/// is outside the dictionary or when the validity vector is shorter than the ids.
+fn string_bytes(
+    ids: &[i64],
+    validity: Option<&[i64]>,
+    dictionary: &[String],
+    budget: u64,
+) -> Result<u64> {
+    let entry = |id: i64| -> Result<u64> {
+        usize::try_from(id)
+            .ok()
+            .and_then(|id| dictionary.get(id))
+            .map(|s| s.len() as u64)
+            .ok_or_else(|| anyhow::anyhow!("bad dictionary index"))
+    };
+    let mut total = 0u64;
+    match validity {
+        None => {
+            for &id in ids {
+                total = total.saturating_add(entry(id)?);
+            }
+        }
+        Some(validity) => {
+            ensure!(validity.len() >= ids.len(), "invalid validity");
+            for (&id, &valid) in ids.iter().zip(validity) {
+                if valid == 1 {
+                    total = total.saturating_add(entry(id)?);
+                }
+            }
+        }
+    }
+    ensure!(total <= budget, string_limit_error(budget));
+    Ok(total)
+}
+
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub enum Mode {
     Gqodb,
@@ -59,9 +113,11 @@ struct Layout {
     columns: Vec<Column>,
 }
 
-fn normalize(batch: &RecordBatch) -> Result<(Layout, Vec<Vec<i64>>)> {
+fn normalize(batch: &RecordBatch, string_limit: u64) -> Result<(Layout, Vec<Vec<i64>>)> {
     let mut values = Vec::new();
     let mut columns = Vec::new();
+    // Decoded string bytes so far over all string columns (nulls count as empty strings).
+    let mut string_total = 0u64;
     for array in batch.columns() {
         let mut column = Column {
             value: values.len(),
@@ -138,6 +194,12 @@ fn normalize(batch: &RecordBatch) -> Result<(Layout, Vec<Vec<i64>>)> {
                 let mut v = Vec::with_capacity(a.len());
                 for s in a.iter() {
                     let s = s.unwrap_or("");
+                    // Checked before the string is copied into the dictionary.
+                    string_total = string_total.saturating_add(s.len() as u64);
+                    ensure!(
+                        string_total <= string_limit,
+                        string_limit_error(string_limit)
+                    );
                     let id = *ids.entry(s).or_insert_with(|| {
                         let id = column.dictionary.len() as i64;
                         column.dictionary.push(s.to_owned());
@@ -177,12 +239,21 @@ fn exact_scaled(v: f64, scale: f64) -> Option<i64> {
     let n = scaled as i64;
     ((n as f64 / scale).to_bits() == v.to_bits()).then_some(n)
 }
-fn restore(layout: Layout, mut values: Vec<Vec<i64>>) -> Result<RecordBatch> {
+fn restore(layout: Layout, values: Vec<Vec<i64>>) -> Result<RecordBatch> {
+    restore_with_limit(layout, values, MAX_DECODED_STRING_BYTES)
+}
+fn restore_with_limit(
+    layout: Layout,
+    mut values: Vec<Vec<i64>>,
+    string_limit: u64,
+) -> Result<RecordBatch> {
     ensure!(
         layout.columns.len() == layout.schema.fields().len(),
         "schema dimensions"
     );
     let mut arrays = Vec::new();
+    // Decoded string bytes still allowed, shared by all string columns of the block.
+    let mut string_budget = string_limit;
     // Metadata may alias normalized columns (including validity). Move a vector
     // only on its last use; older/aliased layouts retain their original meaning.
     let mut uses = vec![0usize; values.len()];
@@ -270,11 +341,17 @@ fn restore(layout: Layout, mut values: Vec<Vec<i64>>) -> Result<RecordBatch> {
                         .all(|&v| v >= 0 && (v as usize) < column.dictionary.len()),
                     "bad dictionary index"
                 );
+                // The decoded size is known before anything is allocated: refuse above the limit.
+                let bytes = string_bytes(
+                    v,
+                    validity.map(|a| a.as_slice()),
+                    &column.dictionary,
+                    string_budget,
+                )?;
+                string_budget -= bytes;
                 if validity.is_none() {
-                    let bytes = v.iter().try_fold(0usize, |n, &id| {
-                        n.checked_add(column.dictionary[id as usize].len())
-                            .ok_or_else(|| anyhow::anyhow!("string capacity overflow"))
-                    })?;
+                    let bytes = usize::try_from(bytes)
+                        .map_err(|_| anyhow::anyhow!("string capacity overflow"))?;
                     let mut builder = LargeStringBuilder::with_capacity(v.len(), bytes);
                     let mut start = 0;
                     while start < v.len() {
@@ -355,7 +432,7 @@ fn parquet_encode(batch: &RecordBatch, mode: Mode) -> Result<Vec<u8>> {
 pub fn encode(batch: &RecordBatch, mode: Mode) -> Result<Vec<u8>> {
     let mut out = match mode {
         Mode::Gqodb | Mode::GqodbBook => {
-            let (layout, values) = normalize(batch)?;
+            let (layout, values) = normalize(batch, MAX_DECODED_STRING_BYTES)?;
             let meta = serde_json::to_vec(&layout)?;
             let payload = if matches!(mode, Mode::GqodbBook) {
                 crate::book::encode(&values)?
@@ -374,7 +451,7 @@ pub fn encode(batch: &RecordBatch, mode: Mode) -> Result<Vec<u8>> {
             out
         }
         Mode::ParquetNormalizedLz4 => {
-            let (layout, values) = normalize(batch)?;
+            let (layout, values) = normalize(batch, MAX_DECODED_STRING_BYTES)?;
             let fields: Vec<_> = (0..values.len())
                 .map(|i| Field::new(format!("c{i}"), DataType::Int64, false))
                 .collect();
@@ -563,5 +640,126 @@ mod restore_tests {
         )?;
         assert!(equal(&actual, &expected));
         Ok(())
+    }
+
+    fn strings(rows: &[&str]) -> RecordBatch {
+        RecordBatch::try_from_iter(vec![(
+            "s",
+            Arc::new(LargeStringArray::from(rows.to_vec())) as ArrayRef,
+        )])
+        .unwrap()
+    }
+
+    #[test]
+    fn string_bytes_counts_valid_rows_and_checks_the_boundary() {
+        let dictionary = ["", "abc", "défg"].map(String::from); // lengths 0, 3, 5
+        let ids = [1, 2, 2, 0, 1];
+        // all rows valid: 3 + 5 + 5 + 0 + 3
+        assert_eq!(string_bytes(&ids, None, &dictionary, 16).unwrap(), 16);
+        assert!(string_bytes(&ids, None, &dictionary, 15).is_err());
+        assert_eq!(string_bytes(&ids, None, &dictionary, u64::MAX).unwrap(), 16);
+        // invalid rows decode to nothing and do not count
+        let validity = [1, 0, 1, 1, 0];
+        assert_eq!(
+            string_bytes(&ids, Some(&validity), &dictionary, 8).unwrap(),
+            8
+        );
+        assert!(string_bytes(&ids, Some(&validity), &dictionary, 7).is_err());
+        assert_eq!(string_bytes(&[], None, &dictionary, 0).unwrap(), 0);
+        // out-of-range ids and a short validity vector are errors, not panics
+        assert!(string_bytes(&[3], None, &dictionary, 99).is_err());
+        assert!(string_bytes(&[-1], None, &dictionary, 99).is_err());
+        assert!(string_bytes(&ids, Some(&validity[..4]), &dictionary, 99).is_err());
+    }
+
+    #[test]
+    fn string_bytes_sums_beyond_32_bits_exactly() {
+        let dictionary = vec!["x".repeat(1 << 16)];
+        let ids = vec![0i64; 1 << 16];
+        assert_eq!(
+            string_bytes(&ids, None, &dictionary, u64::MAX).unwrap(),
+            1u64 << 32
+        );
+        assert!(string_bytes(&ids, None, &dictionary, (1u64 << 32) - 1).is_err());
+    }
+
+    #[test]
+    fn decode_limit_matches_encode_limit_at_the_boundary() {
+        // 3 + 5 + 3 = 11 string bytes in the first column, 2 + 2 in the second.
+        let batch = RecordBatch::try_from_iter(vec![
+            (
+                "a",
+                Arc::new(LargeStringArray::from(vec!["abc", "défg", "abc"])) as ArrayRef,
+            ),
+            (
+                "b",
+                Arc::new(LargeStringArray::from(vec![Some("hi"), None, Some("hi")])) as ArrayRef,
+            ),
+        ])
+        .unwrap();
+        let total = 11 + 4;
+        // The limit is on the total over all string columns, valid rows only.
+        for limit in [total - 1, total, total + 1, 0, u64::MAX] {
+            let encoded = normalize(&batch, limit);
+            let (layout, values) = normalize(&batch, u64::MAX).unwrap();
+            let decoded = restore_with_limit(layout, values, limit);
+            assert_eq!(encoded.is_ok(), limit >= total, "encode, limit {limit}");
+            assert_eq!(decoded.is_ok(), limit >= total, "decode, limit {limit}");
+            if let Ok(decoded) = decoded {
+                assert!(equal(&decoded, &batch));
+            }
+        }
+        // Whatever the encoder accepts under the real limit decodes again.
+        for mode in [Mode::Gqodb, Mode::GqodbBook, Mode::ParquetNormalizedLz4] {
+            let bytes = encode(&batch, mode).unwrap();
+            assert!(equal(&decode(Bytes::from(bytes), mode).unwrap(), &batch));
+        }
+    }
+
+    #[test]
+    fn the_limit_is_shared_by_all_string_columns_of_a_block() {
+        let layout = |dictionary: Vec<String>| Layout {
+            schema: Schema::new(vec![
+                Field::new("a", DataType::LargeUtf8, false),
+                Field::new("b", DataType::LargeUtf8, false),
+            ]),
+            columns: vec![
+                Column {
+                    value: 0,
+                    validity: None,
+                    scale: None,
+                    dictionary: dictionary.clone(),
+                },
+                Column {
+                    value: 1,
+                    validity: None,
+                    scale: None,
+                    dictionary,
+                },
+            ],
+        };
+        let values = || vec![vec![0i64; 10], vec![0i64; 10]]; // 10 rows of 5 bytes, twice
+        let l = || layout(vec!["12345".into()]);
+        assert!(restore_with_limit(l(), values(), 100).is_ok());
+        assert!(restore_with_limit(l(), values(), 99).is_err());
+        assert!(restore_with_limit(l(), values(), 50).is_err());
+    }
+
+    #[test]
+    fn encoder_refuses_a_batch_that_could_not_be_decoded() {
+        // Two rows of 64 MiB + 1 byte: 128 MiB + 2 bytes of decoded strings, two bytes over the
+        // limit. The refusal comes at the second row, before its string would be copied.
+        let big = "z".repeat((MAX_DECODED_STRING_BYTES / 2) as usize + 1);
+        let mut builder = LargeStringBuilder::with_capacity(2, big.len() * 2);
+        builder.append_value_n(&big, 2);
+        let batch = RecordBatch::try_from_iter(vec![("s", Arc::new(builder.finish()) as ArrayRef)])
+            .unwrap();
+        for mode in [Mode::Gqodb, Mode::GqodbBook, Mode::ParquetNormalizedLz4] {
+            let err = encode(&batch, mode).unwrap_err().to_string();
+            assert!(err.contains("decoded string bytes exceed"), "{err}");
+        }
+        // One row alone is under the limit and still encodes.
+        let one = strings(&[big.as_str()]);
+        assert!(encode(&one, Mode::Gqodb).is_ok());
     }
 }

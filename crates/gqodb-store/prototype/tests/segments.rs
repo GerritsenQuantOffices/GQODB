@@ -247,3 +247,93 @@ fn bounded_single_block_access_checks_index_rows_and_expansion_budget() {
         &input
     ));
 }
+
+/// Finding "string expansion" (docs/FUZZING.md, fixed finding 9). A one-block segment of 61 KB whose
+/// block claims 1 048 576 rows of a 60 000-byte string (62 914 560 000 decoded string bytes). Every
+/// unchecked read path used to abort with `memory allocation of 62917705728 bytes failed`; each now
+/// returns the limit error, and `ob_store verify|query|recover` print it and exit non-zero.
+/// The file is synthetic (written by `examples/string_bomb` of the fuzz crate); its index is honest
+/// (one symbol, time 5), so the file opens and the refusal comes from decoding.
+const STRING_BOMB_SEGMENT: &[u8] = include_bytes!("regressions/string_bomb_segment.gqodb.ob");
+
+fn assert_string_limit<T>(result: anyhow::Result<T>, path: &str) {
+    let message = match result {
+        Ok(_) => panic!("{path}: the string bomb was decoded"),
+        Err(e) => format!("{e:#}"),
+    };
+    assert!(
+        message.contains("decoded string bytes exceed the limit of 134217728 bytes"),
+        "{path}: refused for another reason: {message}"
+    );
+}
+
+#[test]
+fn string_bomb_segment_is_refused_by_every_unchecked_read_path() {
+    let temp = Temp::new();
+    let path = temp.path("bomb.gqodb.ob");
+    fs::write(&path, STRING_BOMB_SEGMENT).unwrap();
+    let mut reader = Reader::open(&path).unwrap();
+    assert_eq!(reader.blocks().len(), 1);
+    assert_string_limit(reader.read_block(0), "read_block");
+    assert_string_limit(reader.read_all(), "read_all");
+    assert_string_limit(reader.profile_read_all(), "profile_read_all");
+    assert_string_limit(reader.visit_blocks(|_| Ok(())), "visit_blocks");
+    assert_string_limit(reader.query("BTC", 0, 10), "query");
+    assert_string_limit(Reader::recover(&path), "recover");
+    // The bounded path still refuses it first, for its own reason (its budget, not the limit).
+    assert!(reader.read_block_bounded(0, 1 << 20, 64 << 20).is_err());
+    // The store frame limit and the string limit are the same 128 MiB: this budget is accepted by
+    // `read_block_bounded` and one byte more is not (the budget is checked before the block).
+    let accepted = reader
+        .read_block_bounded(0, 1 << 20, 128 << 20)
+        .unwrap_err()
+        .to_string();
+    assert!(
+        !accepted.contains("invalid block decode budget"),
+        "{accepted}"
+    );
+    let refused = reader
+        .read_block_bounded(0, 1 << 20, (128 << 20) + 1)
+        .unwrap_err()
+        .to_string();
+    assert!(refused.contains("invalid block decode budget"), "{refused}");
+    assert_eq!(real::MAX_DECODED_STRING_BYTES, 128 << 20);
+}
+
+/// A writer cannot produce a block its readers would refuse: appending a batch whose decoded
+/// strings are over the limit is an error and leaves the writer usable.
+#[test]
+fn writer_refuses_a_block_that_could_not_be_decoded() {
+    let temp = Temp::new();
+    let path = temp.path("big.gqodb.ob");
+    let small = batch(vec![1, 2], vec!["BTC", "BTC"]);
+    let big = "z".repeat((real::MAX_DECODED_STRING_BYTES / 2) as usize + 1);
+    let mut strings = arrow_array::builder::LargeStringBuilder::new();
+    strings.append_value_n(&big, 2);
+    let too_big = RecordBatch::try_from_iter(vec![
+        (
+            "receipt_ns",
+            Arc::new(Int64Array::from(vec![1, 2])) as ArrayRef,
+        ),
+        ("symbol", Arc::new(strings.finish()) as ArrayRef),
+        (
+            "price_e8",
+            Arc::new(Int64Array::from(vec![123456789; 2])) as ArrayRef,
+        ),
+    ])
+    .unwrap();
+    let mut writer = Writer::create_with_codec(
+        &path,
+        small.schema(),
+        "receipt_ns",
+        "symbol",
+        real::Mode::Gqodb,
+    )
+    .unwrap();
+    let error = writer.append(&too_big).unwrap_err().to_string();
+    assert!(error.contains("decoded string bytes exceed"), "{error}");
+    writer.append(&small).unwrap();
+    writer.finish().unwrap();
+    let mut reader = Reader::open(&path).unwrap();
+    assert!(real::equal(&reader.read_block(0).unwrap(), &small));
+}
