@@ -69,7 +69,7 @@ compatibility promise between releases, and no migration tool.
   `Reader::read_block`, `read_all`, `visit_blocks`, `query`, `recover`, and the `ob_store verify|query|recover`
   commands that call them) refuses a block whose decoded strings exceed 128 MiB
   (`real::MAX_DECODED_STRING_BYTES`, the same 128 MiB as the codec facade and the store) before it
-  allocates them; that closes the one class found by fuzzing (docs/FUZZING.md, finding 9) and is
+  allocates them; that closes the one class found by reading the code, not by a fuzzer (docs/FUZZING.md, finding 9) and is
   not a bound on everything: the numeric columns of a block are not capped there (a 16 KB block can
   decode to about 0.5 GiB), and the layer remains unaudited. Tested for the cases in the test suites
   and by 15 fuzz targets of limited duration; neither is a security audit.

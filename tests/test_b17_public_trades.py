@@ -8,6 +8,7 @@ timed benchmark run: the fixture-scale smoke run discards its timings. Tests tha
 built example, DuckDB/pyarrow or ClickHouse skip with a message when the tool is absent;
 the adapters themselves must then skip cleanly, which is tested too.
 """
+import atexit
 import copy
 import hashlib
 import json
@@ -28,6 +29,20 @@ import stats  # noqa: E402
 import verify_b17  # noqa: E402
 
 FIXTURES = os.path.join(ROOT, "tests", "fixtures", "b17")
+
+
+_TEMPORARY = []
+
+
+def temp_dir(prefix):
+    """A scratch directory that is removed when the test run ends (the tests used to leave them behind)."""
+    directory = tempfile.mkdtemp(prefix=prefix)
+    _TEMPORARY.append(directory)
+    return directory
+
+
+atexit.register(lambda: [shutil.rmtree(d, ignore_errors=True) for d in _TEMPORARY])
+
 
 def examples_built():
     """Locate (building if necessary) the two Rust examples; None when that is not possible."""
@@ -84,7 +99,7 @@ class RustReference(unittest.TestCase):
     """The Rust converter (R1) and the independent Python reference (R2) must agree."""
 
     def convert(self, csv, variant, rows="all", out=None):
-        out = out or os.path.join(tempfile.mkdtemp(prefix="b17-test-"), "source.parquet")
+        out = out or os.path.join(temp_dir(prefix="b17-test-"), "source.parquet")
         done = subprocess.run([harness.example("trades_convert"), "csv", "--csv", csv, "--variant", variant,
                                "--rows", rows, "--out", out], capture_output=True, text=True)
         return done, out
@@ -126,7 +141,7 @@ class RustReference(unittest.TestCase):
             "v2 overflow": ["1,92233720369.00000000,1.00000000,1,1,5,True,True"],
         }
         for label, lines in cases.items():
-            directory = tempfile.mkdtemp(prefix="b17-test-")
+            directory = temp_dir(prefix="b17-test-")
             path = os.path.join(directory, "bad.csv")
             with open(path, "w") as handle:
                 handle.write("\n".join(lines) + "\n")
@@ -144,14 +159,14 @@ class RustReference(unittest.TestCase):
         self.assertEqual(done.returncode, 0)
         again, _ = self.convert(path, "v1", out=out)
         self.assertNotEqual(again.returncode, 0)
-        directory = tempfile.mkdtemp(prefix="b17-test-")
+        directory = temp_dir(prefix="b17-test-")
         nonl = os.path.join(directory, "nonl.csv")
         open(nonl, "w").write("1,1.00000000,1.00000000,1,1,5,True,True")
         done, _ = self.convert(nonl, "v1", out=os.path.join(directory, "o.parquet"))
         self.assertNotEqual(done.returncode, 0)
 
     def test_v2_float_path_agrees_or_refuses(self):
-        work = tempfile.mkdtemp(prefix="b17-test-")
+        work = temp_dir(prefix="b17-test-")
         results = {}
         for name in ("normalisable_aggtrades.csv", "edge_aggtrades.csv"):
             sources = {}
@@ -175,7 +190,7 @@ class RustAdapters(unittest.TestCase):
     """Every Rust candidate is bit-exact on the edge table (negative zero, NaN payloads, int64 limits)."""
 
     def test_edge_table_roundtrip_per_candidate(self):
-        work = tempfile.mkdtemp(prefix="b17-test-")
+        work = temp_dir(prefix="b17-test-")
         for variant in ("v1", "v2"):
             source = os.path.join(work, f"edge-{variant}.parquet")
             done = subprocess.run([harness.example("trades_convert"), "synthetic-edge", "--variant", variant, "--out", source],
@@ -202,7 +217,7 @@ class RustAdapters(unittest.TestCase):
 
     def test_a_wrong_answer_and_a_corrupt_file_are_detected(self):
         """The exactness check must fail for a wrong answer, and a damaged GQODB frame must not read."""
-        work = tempfile.mkdtemp(prefix="b17-test-")
+        work = temp_dir(prefix="b17-test-")
         source = os.path.join(work, "edge.parquet")
         subprocess.run([harness.example("trades_convert"), "synthetic-edge", "--variant", "v1", "--out", source],
                        capture_output=True, check=True)
@@ -290,7 +305,7 @@ class Fetch(unittest.TestCase):
         return digest
 
     def test_local_copy_verified_and_receipt_written(self):
-        directory = tempfile.mkdtemp(prefix="b17-test-")
+        directory = temp_dir(prefix="b17-test-")
         digest = self.make_archive(directory, "TESTUSDT-aggTrades-2030-01.zip")
         out = os.path.join(directory, "out")
         done = self.fetch("TESTUSDT", "2030-01", "--out", out, "--zip", os.path.join(directory, "TESTUSDT-aggTrades-2030-01.zip"),
@@ -302,7 +317,7 @@ class Fetch(unittest.TestCase):
         self.assertEqual(receipt["host"], "data.binance.vision")
 
     def test_checksum_mismatch_is_refused(self):
-        directory = tempfile.mkdtemp(prefix="b17-test-")
+        directory = temp_dir(prefix="b17-test-")
         self.make_archive(directory, "TESTUSDT-aggTrades-2030-01.zip", tamper=True)
         done = self.fetch("TESTUSDT", "2030-01", "--out", os.path.join(directory, "out"),
                           "--zip", os.path.join(directory, "TESTUSDT-aggTrades-2030-01.zip"),
@@ -312,7 +327,7 @@ class Fetch(unittest.TestCase):
         self.assertFalse(os.path.exists(os.path.join(directory, "out", "TESTUSDT-aggTrades-2030-01.zip.fetch.json")))
 
     def test_pinned_value_is_enforced_even_when_the_checksum_file_agrees(self):
-        directory = tempfile.mkdtemp(prefix="b17-test-")
+        directory = temp_dir(prefix="b17-test-")
         self.make_archive(directory, "PAXGUSDT-aggTrades-2025-10.zip")  # self-consistent but not the registered file
         args = ["PAXGUSDT", "2025-10", "--out", os.path.join(directory, "out"), "--zip",
                 os.path.join(directory, "PAXGUSDT-aggTrades-2025-10.zip"), "--checksum",
@@ -323,7 +338,7 @@ class Fetch(unittest.TestCase):
         self.assertEqual(self.fetch(*args, "--no-pin").returncode, 0)
 
     def test_download_path_through_a_file_url(self):
-        directory = tempfile.mkdtemp(prefix="b17-test-")
+        directory = temp_dir(prefix="b17-test-")
         remote = os.path.join(directory, "remote", "data", "spot", "monthly", "aggTrades", "TESTUSDT")
         os.makedirs(remote)
         digest = self.make_archive(remote, "TESTUSDT-aggTrades-2030-02.zip")
@@ -376,7 +391,7 @@ class DryRun(unittest.TestCase):
     def test_measure_is_refused_without_the_go_flag(self):
         env = {k: v for k, v in os.environ.items() if k != "B17_MEASURE_GO"}
         done = subprocess.run([sys.executable, os.path.join(ROOT, "benchmarks", "public_trades", "harness.py"), "measure",
-                               "--work", tempfile.mkdtemp(prefix="b17-test-"), "--out", "unused"], capture_output=True, text=True, env=env)
+                               "--work", temp_dir(prefix="b17-test-"), "--out", "unused"], capture_output=True, text=True, env=env)
         self.assertNotEqual(done.returncode, 0)
         self.assertIn("B17_MEASURE_GO", done.stderr + done.stdout)
 
@@ -404,7 +419,7 @@ class Adapters(unittest.TestCase):
         inside = subprocess.run([sys.executable, script, "--dest", os.path.join(ROOT, "artifacts", "tools"), "--dry-run"],
                                 capture_output=True, text=True)
         self.assertNotEqual(inside.returncode, 0)
-        outside = subprocess.run([sys.executable, script, "--dest", tempfile.mkdtemp(prefix="b17-test-"), "--dry-run"],
+        outside = subprocess.run([sys.executable, script, "--dest", temp_dir(prefix="b17-test-"), "--dry-run"],
                                  capture_output=True, text=True)
         self.assertEqual(outside.returncode, 0, outside.stderr)
         self.assertNotIn("curl", outside.stdout)
@@ -413,7 +428,7 @@ class Adapters(unittest.TestCase):
 @unittest.skipUnless(examples_built() and have_python_tools(), "built examples plus duckdb and pyarrow are needed")
 class EndToEndFixture(unittest.TestCase):
     def test_smoke_over_the_edge_fixtures_is_exact_for_every_available_candidate(self):
-        work = tempfile.mkdtemp(prefix="b17-smoke-")
+        work = temp_dir(prefix="b17-smoke-")
         py = os.environ.get("B17_PYTHON", sys.executable)
         done = subprocess.run([py, os.path.join(ROOT, "benchmarks", "public_trades", "harness.py"), "smoke", "--work", work,
                                "--fixtures", "FX1,FX2", "--quick", "--out", os.path.join(work, "out")],
@@ -492,11 +507,11 @@ def harness_seal(out):
 class Evidence(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.root = tempfile.mkdtemp(prefix="b17-evidence-")
+        cls.root = temp_dir(prefix="b17-evidence-")
         cls.good = build_good_evidence(cls.root)
 
     def tampered(self, mutate):
-        root = tempfile.mkdtemp(prefix="b17-evidence-")
+        root = temp_dir(prefix="b17-evidence-")
         shutil.copytree(os.path.join(self.root, "docs"), os.path.join(root, "docs"))
         target = os.path.join(root, "results", "b17-public-trades-test")
         shutil.copytree(self.good, target)
@@ -627,7 +642,7 @@ class Evidence(unittest.TestCase):
         self.assertTrue(any("cache eviction is meaningless" in f for f in failures), failures)
 
     def test_incomplete_rounds_must_be_labelled_underpowered(self):
-        root = tempfile.mkdtemp(prefix="b17-evidence-")
+        root = temp_dir(prefix="b17-evidence-")
         out = build_good_evidence(root, fake_samples(measured=6), measured=6)
         failures = verify_b17.verify_dir(out, root)
         self.assertEqual(failures, [])
@@ -675,7 +690,7 @@ class Resume(unittest.TestCase):
         return run_round
 
     def test_resume_continues_at_the_next_round_and_keeps_the_flag_rule(self):
-        directory = tempfile.mkdtemp(prefix="b17-test-")
+        directory = temp_dir(prefix="b17-test-")
         ctx = self.make_ctx(directory)
         original = harness.run_round
         try:
@@ -715,7 +730,7 @@ class Resume(unittest.TestCase):
             harness.run_round = original
 
     def test_repeat_budget_is_bounded(self):
-        directory = tempfile.mkdtemp(prefix="b17-test-")
+        directory = temp_dir(prefix="b17-test-")
         ctx = self.make_ctx(directory)
         original = harness.run_round
         try:
@@ -741,7 +756,7 @@ class Resume(unittest.TestCase):
         self.assertEqual(sample(0, 5 * 10**8, 10**8, cache="cold"), [])
 
     def test_systematic_failure_in_the_first_round_stops_the_run(self):
-        directory = tempfile.mkdtemp(prefix="b17-test-")
+        directory = temp_dir(prefix="b17-test-")
         ctx = self.make_ctx(directory)
         original = harness.run_round
         try:

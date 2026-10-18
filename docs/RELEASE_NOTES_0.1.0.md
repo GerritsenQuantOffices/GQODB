@@ -68,12 +68,12 @@ redistributed; aggregates only.
 | D1 | 60 s range read, warm | 3.2 ms | `parquet-delta-bss-lz4`, 4.1 ms | 0.772 | better |
 | D1 | Peak memory, write | 72.6 MiB | `duckdb-parquet-matched`, 17.1 MiB | 4.244 | worse |
 | D1 | Peak memory, full read | 68.1 MiB | `parquet-delta-bss-snappy`, 68.8 MiB | 0.990 | equivalent |
-| D2 | Stored bytes | 6.21 MB | `duckdb-parquet-zstd`, 7.63 MB | 0.814 | better |
-| D2 | Durable write | 228.5 ms | `parquet-delta-bss-snappy`, 250.0 ms | 0.914 | better |
-| D2 | Full read, warm | 66.5 ms | `parquet-delta-bss-lz4`, 77.8 ms | 0.855 | better |
-| D2 | 60 s range read, warm | 3.2 ms | `parquet-delta-bss-snappy`, 4.1 ms | 0.786 | better |
-| D2 | Peak memory, write | 72.5 MiB | `duckdb-parquet-matched`, 17.4 MiB | 4.175 | worse |
-| D2 | Peak memory, full read | 68.1 MiB | `parquet-delta-bss-snappy`, 68.8 MiB | 0.991 | equivalent |
+| D2 (n = 11, underpowered) | Stored bytes | 6.21 MB | `duckdb-parquet-zstd`, 7.63 MB | 0.814 | better |
+| D2 (n = 11, underpowered) | Durable write | 228.5 ms | `parquet-delta-bss-snappy`, 250.0 ms | 0.914 | better |
+| D2 (n = 11, underpowered) | Full read, warm | 66.5 ms | `parquet-delta-bss-lz4`, 77.8 ms | 0.855 | better |
+| D2 (n = 11, underpowered) | 60 s range read, warm | 3.2 ms | `parquet-delta-bss-snappy`, 4.1 ms | 0.786 | better |
+| D2 (n = 11, underpowered) | Peak memory, write | 72.5 MiB | `duckdb-parquet-matched`, 17.4 MiB | 4.175 | worse |
+| D2 (n = 11, underpowered) | Peak memory, full read | 68.1 MiB | `parquet-delta-bss-snappy`, 68.8 MiB | 0.991 | equivalent |
 
 GQODB does not win every axis and the earlier headline "wins every axis" is withdrawn.
 Losses: the peak memory of the write is 2.2 to 4.3 times that of the DuckDB Parquet writers
@@ -81,13 +81,16 @@ on the slices and up to 5.0 times that of DuckDB's default Parquet writer on the
 (that is the adapter path, which reads the whole table into memory first for every Rust
 candidate, not a property of the format); full-read memory on the full months is 2.5 to 3.0
 times that of the ClickHouse engine process (not like for like); the warm range read against
-ClickHouse is inconclusive in 7 of 16 cells (ClickHouse range operation times are often 0 and
-these ratios are noise); in V2 the write-time advantage over the Rust Parquet writers
-disappears (1.06 against `parquet-delta-bss-snappy` on D1, worse) and the CPU time of the write against
+ClickHouse is inconclusive in 7 of 16 cells, none worse, with point estimates from 0.33 to 1.24 (1.24 for S2/v1 against
+`clickhouse-default` is no win; ClickHouse range operation times are often 0 and these ratios are noise); in V2 the
+write-time advantage over the delta/BSS LZ4 and Snappy Parquet writers disappears (about 1.0 to 1.06; 1.06 against
+`parquet-delta-bss-snappy` on D1, worse; against the dictionary-LZ4 and Brotli writers it stays at 0.25 to 0.46) and the CPU time of the write against
 `parquet-delta-bss-snappy` is worse on D1 (1.07). Run 1 and run 2 agree: 26 of 864 verdicts differ, 15 of them
-range reads against ClickHouse, and none of the stored-bytes verdicts; the run-2 medians are 0.4% to 7% lower than
-run 1's for GQODB and for the baselines alike (a different machine state), so the extra pass over string columns
-added by the limit fix is not visible, but an effect of a percent or two cannot be excluded. The run-2 receipt names
+range reads against ClickHouse, and none of the stored-bytes verdicts; every operation-time median of run 2 is 0.4% to 7% lower than
+run 1's for GQODB, and the Parquet and DuckDB baselines moved the same way (a different machine state; ClickHouse range reads moved by
+0.35 to 3.9 times), so absolute medians cannot show the effect of the extra pass over string columns added by the limit fix.
+Corrected against the Rust Parquet candidates measured in the same rounds, GQODB full reads are about 0.5% to 1.5% slower in run 2
+(cold reads: 24 of 24 pairs above 1, median +1.3%); no verdict changes (README, addendum A-005). The run-2 receipt names
 `c07fbde`, which is in this history; run 1's receipt names a commit that is not (addendum A-005).
 
 **Trades (B06, historical, superseded by B17).** `results/b06`: 1,048,576 aggregate trades per
@@ -147,8 +150,8 @@ From the README, "Still not measured":
 | Instruments and venues beyond Bybit levels, Binance ETH/UNI trades (B06) and Binance PAXGUSDT trades (B17) | not measured |
 | Multi-threaded, concurrent or networked use; other hosts | not measured |
 | kdb+ / q | no comparison published |
-| Rust versions other than 1.85.0 and 1.96.0, Windows and macOS | only 1.85.0 and 1.96.0 were built and tested, on Linux; no CI run exists yet; Windows and macOS not run |
-| Adversarial fuzzing of the readers | partly done: 15 libFuzzer targets, 9 defects fixed, none open; the unchecked decoding layer remains unaudited (the 128 MiB limit on decoded string bytes closes one class, not all); see `docs/FUZZING.md` |
+| Rust versions other than 1.85.0 and 1.96.0, Windows, any CI run | only 1.85.0 and 1.96.0 were built and tested, on Linux; the 76 tests and 7 doc-tests also passed once on macOS (Apple silicon, Rust 1.98.1, 2026-10-18, no CI); Windows not run; no CI run exists yet |
+| Adversarial fuzzing of the readers | partly done: 15 libFuzzer targets, 9 defects fixed (8 found by fuzzing, 1 by reading the code), none open; the unchecked decoding layer remains unaudited (the 128 MiB limit on decoded string bytes closes one class, not all); see `docs/FUZZING.md` |
 
 Also not done: crates.io publication, a signed tag or artifact, a format-stability
 promise, directory-sync and power-loss qualification of segment files.
@@ -182,7 +185,7 @@ published; it does not say who the publisher is. There is no signature on the ar
 - Exact `arrow`/`parquet` version pins (`=59.3.0`) are inherited by dependent crates.
 - The readers parse untrusted bytes. The unchecked decoding layer (`real::decode`,
   `Reader::read_block`, `read_all`, `visit_blocks`, `query`, `recover`, and therefore the
-  `ob_store verify`, `query` and `recover` commands) is not audited. The one fuzzing finding in it
+  `ob_store verify`, `query` and `recover` commands) is not audited. The one finding in it that came from reading the code and not from a fuzzer
   (a crafted 60 KB block requesting 62.9 GB for a string column) is fixed by a 128 MiB limit on
   decoded string bytes, which also makes `real::encode` refuse a batch above that limit. The limit
   closes that class, not all: the numeric columns of a block are not capped there (a 16 KB block can

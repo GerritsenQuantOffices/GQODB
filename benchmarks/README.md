@@ -22,8 +22,12 @@ recomputes the B11, B15 and B17 summaries from the stored results (B06 in part).
 builds the current tree and performs a deliberately small B01/B02-family smoke run;
 it is a correctness/reproducibility check, not a new performance result.
 
+B17 has two result directories: run 2 (`results/b17-public-trades-20261018`, measured on the released commit) is the main
+result and run 1 (`results/b17-public-trades-20261017`, same protocol, an earlier commit) is kept for comparison. The status line in
+`benchmarks/public_trades/README.md` still names only run 1; that file was left unchanged on purpose (see addendum A-005).
+
 B17 is the first benchmark in this tree that a reader can rerun end to end on public data against
-named baselines (DuckDB, ClickHouse; licence notes in `docs/BASELINE_LICENCES.md`). Its result directory has a hash-checked receipt and every sample;
+named baselines (DuckDB, ClickHouse; licence notes in `docs/BASELINE_LICENCES.md`). Its result directories have hash-checked receipts and every sample;
 the input data (Binance Vision, CC BY-NC-SA 4.0) are not redistributed and must be fetched by the user.
 
 The B13/B15 old-versus-new timings remain historical evidence: their receipts name

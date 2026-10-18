@@ -103,7 +103,9 @@ corpus is the size of libFuzzer's working corpus at the end.
 | `roundtrip_codec` | 35.6 | 43,073 | 20 | 5,488 | 2,175 | 0/0/0 |
 | `roundtrip_store` | 35.7 | 80,817 | 38 | 6,251 | 3,303 | 0/0/0 |
 
-The table lists the last run of each target, on the code described next; it totals about
+The table lists the 35-minute run of each target, on the code described next (before fix 9); the ten targets that
+reach the code changed by fix 9 were run again afterwards ([Re-run after fix 9](#re-run-after-fix-9)), and that re-run is
+their last run. The table totals about
 620 CPU-minutes and 82 million executions. Earlier runs, which found the defects below, added about
 180 minutes (a 12-minute discovery pass over all 15 targets) plus the interrupted reruns of
 `parquet_decode` after each Parquet fix.

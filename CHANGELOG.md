@@ -26,8 +26,9 @@ released" with the release date when the tag is created.
   blocks and the `GQOBHDR1` indexed segment container. The header, not the file
   extension, selects the codec profile.
 - Benchmark protocols, stored results with build receipts under `results/`, and
-  `results/verify_public_evidence.py`, which recomputes the published figures and
-  checks them against the receipts.
+  `results/verify_public_evidence.py`, which checks the receipted result files against
+  their receipts and recomputes the B11, B15 and B17 summaries (B06 in part; the B12 and B13
+  figures are not recomputed).
 - Source installer `install.sh` (asks before installing system packages or Rust) and
   `benchmarks/run.sh` (`verify`, `synthetic-smoke`; neither downloads market data).
 - Crate metadata for all four crates (description, readme, keywords, categories,
@@ -42,15 +43,18 @@ released" with the release date when the tag is created.
   `cargo deny` (licences, advisories, sources), a check that the per-crate licence files
   match the repository's, a check that `THIRD_PARTY_LICENSES.md` is current, and
   macOS and Windows build-and-test entries marked `continue-on-error` (unverified until
-  the first CI run). Third-party actions are pinned by commit SHA; Dependabot is
-  configured weekly for Cargo and GitHub Actions.
+  the first CI run). The third-party actions of the main CI workflow (`rust.yml`) are pinned by
+  commit SHA; the nightly `fuzz.yml` is not pinned yet. Dependabot is configured weekly for
+  Cargo and GitHub Actions.
 - B17: a file-level trades benchmark on public Binance Vision data against Parquet, DuckDB and
   ClickHouse, with pre-registered protocol, addenda, per-sample results and build receipts. Run 2
   (`results/b17-public-trades-20261018/`) is the main result, measured on the released commit
   `c07fbde`; run 1 (`results/b17-public-trades-20261017/`, an earlier commit, before the limit on decoded
   string bytes) is kept for comparison. Against the strongest baseline per axis, GQODB
   stores 3% to 19% fewer bytes than DuckDB Parquet-zstd on the two day-slices, and writes and
-  reads warm about 9-25% faster than the strongest baselines; its write peak
+  reads warm about 9-25% faster than the strongest Parquet configuration (V1; against ClickHouse the
+  warm range-read point estimates run from 0.33 to 1.24 over the cells, one of them, S2/v1 against
+  `clickhouse-default`, without a win); its write peak
   memory is 2.2 to 4.3 times that of the DuckDB Parquet writers (up to 5.0 on the full months;
   the adapter path loads the whole table first, for every Rust candidate). Two cells of run 2 are
   UNDERPOWERED (D2/v1 and D2/v2, 11 and 12 valid rounds). Every loss is in
@@ -65,7 +69,7 @@ released" with the release date when the tag is created.
 
 ### Fixed
 
-Found by fuzzing the readers; each has a regression test in
+Nine defects: eight found by fuzzing the readers, one (fix 9, the unbounded string expansion) found by reading the code. Each has a regression test in
 `crates/gqodb-blocks/prototype/tests/malformed.rs`. Fixes 2 to 6 and 8 have a stored reproducer
 under `tests/regressions/`; fixes 1 and 7 have none (their tests build the input inline).
 No file format or valid-input encoder output changed.
@@ -97,7 +101,7 @@ No file format or valid-input encoder output changed.
   page-cache-evicted reads. See the README for what has not been measured (a cold device,
   datasets above about 3.7 million rows, other venues, multi-threaded use, other platforms).
 - Adversarial fuzzing of the readers is partial (15 libFuzzer targets, at least 35 minutes each on one
-  machine, not exhaustive); nine defects found, nine fixed, none open. The unchecked decoding
+  machine, not exhaustive); nine defects found (eight by fuzzing, one by reading the code), nine fixed, none open. The unchecked decoding
   layer (`real::decode`, `Reader::read_block`, `read_all`, `visit_blocks`, `query`, `recover`, and
   the `ob_store verify|query|recover` commands that call them) remains unaudited: the 128 MiB limit
   on decoded string bytes closes one class, not all (for example, the numeric columns of a block are

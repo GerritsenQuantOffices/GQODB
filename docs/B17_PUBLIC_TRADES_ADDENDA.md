@@ -170,8 +170,15 @@ had measured. To make every figure apply to the code that is released, the whole
    (`crates/gqodb-blocks/prototype/src/real.rs`, commit `dcf562b`): `real::decode` makes one extra pass over the id
    vector of each string column and `real::encode` one saturating addition and comparison per string row. That is the
    only change on the path of the B17 adapters; no format change (the encoder output of 517 reproducible encodings is identical
-   before and after). Run 2 vs run 1 shows no slowdown that stands out against the drift between the runs
-   (GQODB time medians 0.4% to 7% lower, the baselines' similar); an effect of a percent or two is not excluded.
+   before and after). Absolute medians cannot show the effect: every operation-time median of run 2 is 0.4% to 7%
+   lower than in run 1 for GQODB, the Parquet and DuckDB baselines moved the same way (ClickHouse range reads moved by
+   0.35 to 3.9 times), and the machine was in another state. A review compared GQODB with the Rust Parquet candidates
+   measured in the same rounds of each run, which removes the drift: GQODB full reads are then about 0.5% to 1.5% slower in
+   run 2 than in run 1 (cold full read: 24 of 24 candidate-and-cell pairs above 1, +0.2% to +2.9%, median +1.3%, and in
+   all eight cells against `parquet-delta-bss-lz4`; warm full read: median +0.7%, 19 of 24 pairs above 1). That fits the extra
+   pass and changes no verdict (the headline ratios are 0.81 to 0.86). The sentence in run 2's `ASSESSMENT.md` that the extra
+   pass is not visible against the drift is therefore superseded by this paragraph; the assessment is sealed and was not
+   edited, and the README states the corrected finding.
 3. **Run 1's receipt commit is not in this history.** `results/b17-public-trades-20261017/BUILD_RECEIPTS.json` names
    `3323f73c06f8076b6f5054783e02043a6c3c55a3`, a commit of the private development history (as do the B13 and B15
    receipts). That run is identified here by git object hashes instead; `sha256sum Cargo.lock` equals
@@ -207,5 +214,16 @@ had measured. To make every figure apply to the code that is released, the whole
    | `benchmarks/baselines` | `9eeebd205969b4465c71eab51d32d4264ce7abde` |
    | `benchmarks/public_trades` | `ea2f4290f628c9483b9dbe507a0f6276d181a843` |
 5. The A-004 numbers and labels of run 1 were recomputed on 2026-10-18, and the wording of run 1's `ASSESSMENT.md` was corrected;
-   both are listed under `text_corrections` in `results/PUBLIC_REDACTION.json`. Run 2's `ASSESSMENT.md` was written once,
-   before sealing, and needs no redaction record.
+   both are listed under `text_corrections` in `results/PUBLIC_REDACTION.json`. Run 2's `ASSESSMENT.md` was completed by hand
+   after the harness had written its skeleton and sealed before the commit (a first seal was refreshed after the last text
+   edits); no data file changed after the run, `samples.json` equals the run's checkpoint, and `summary.json` is recomputed by the
+   verifier. The committed hashes equal the receipt, so no redaction record is needed.
+6. **Run 2 was designated the main result before it started.** The instruction to measure on the released commit and to treat
+   the second run as the main result was given at 08:33 UTC on 2026-10-18; the run started at 08:37 UTC. Both runs are
+   shown; run 2 is not better everywhere (D1 warm range read against `clickhouse-default` and the V2 write against
+   `parquet-delta-bss-snappy` are worse than in run 1).
+7. **Sensitivity of run 2.** Over all measured rounds, flagged ones included, 22 of the 864 verdicts of run 2 change; one is on a
+   headline cell (D2 warm range read against `clickhouse-default`, better to inconclusive). The count of 6 changes in
+   addendum A-004 (item 5, none on a headline axis) is the figure of run 1.
+8. `benchmarks/public_trades/README.md` still names only run 1 in its status line. It was left unchanged on purpose so that the
+   object hash of `benchmarks/public_trades` stays equal to the measured one (item 4); `benchmarks/README.md` names both runs.

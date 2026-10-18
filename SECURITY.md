@@ -11,7 +11,7 @@ impact. Use synthetic data whenever possible.
 The codecs and readers in this repository parse untrusted bytes. The unchecked decoding
 layer (`real::decode`, `Reader::read_block`, `read_all`, `visit_blocks`, `query`,
 `profile_read_all`, `recover`, and therefore the `ob_store verify`, `query` and `recover`
-commands) is not audited. One class of problem in it was found by fuzzing and is fixed: a
+commands) is not audited. One class of problem in it, found by reading the code and not by a fuzzer, is fixed: a
 crafted block could request `rows x longest string` bytes for a string column (62.9 GB from a
 60 KB block). That layer now refuses a block whose decoded strings exceed 128 MiB, before it
 allocates them (`real::MAX_DECODED_STRING_BYTES`; `docs/FUZZING.md`, finding 9). The limit

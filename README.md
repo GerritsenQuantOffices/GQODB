@@ -8,8 +8,8 @@
 
 <img src="docs/assets/badge-status.svg" alt="status: prototype">
 <img src="docs/assets/badge-licence.svg" alt="licence: Apache-2.0">
-<img src="docs/assets/badge-tests.svg" alt="tests: 76 passed, 0 failed">
-<img src="docs/assets/badge-evidence.svg" alt="evidence: 28 receipted files">
+<img src="docs/assets/badge-tests.svg" alt="tests: 76 passed, 0 failed (local run, no CI)">
+<img src="docs/assets/badge-evidence.svg" alt="evidence: 28 receipted files (local check, no CI)">
 
 [Install](#build-it) · [Formats](#formats) · [Benchmarks](#benchmarks) ·
 [Evidence](#evidence) · [Crates](#crates) · [Licence](#licence-and-the-engine)
@@ -165,7 +165,7 @@ python3 benchmarks/verify_manifest.py
 > [!WARNING]
 > `ob_store verify`, `ob_store query` and `ob_store recover`, and the library calls behind
 > them (`Reader::read_all`, `visit_blocks`, `read_block`, `query`, `recover`), run on the
-> unchecked decoding layer, which is not audited. A fuzzing finding in it is fixed: a crafted
+> unchecked decoding layer, which is not audited. A finding in it, made by reading the code and not by a fuzzer, is fixed: a crafted
 > block could make it request a very large allocation (62.9 GB from a 60 KB block); it now
 > refuses blocks whose decoded strings exceed 128 MiB. That closes one class, not all: for
 > example a 16 KB block can still decode there to about 0.5 GiB of integer columns. Use these
@@ -175,15 +175,15 @@ python3 benchmarks/verify_manifest.py
 The `demo` and `recover` commands only create new files: if a target already exists
 they stop with `File exists`, so remove the files under `/tmp` (or use other names)
 before running the block again. The commands above were run in a clean checkout of this
-release branch on 2026-10-17 (Linux x86_64, Rust 1.96.0) and produced the output shown in
+release branch on 2026-10-18 (Linux x86_64, Rust 1.96.0) and produced the output shown in
 their comments.
 
 Requirements for a manual build: Git, a C linker (`cc`), Rust and, for the two
 verification scripts, Python 3 (standard library only). The tested toolchain is Rust
 1.96.0 on Linux x86_64. The declared minimum, Rust 1.85, was built and tested on Linux
-on 2026-10-17 with the committed `Cargo.lock` and has a CI job; newer dependency
-versions are not covered. macOS and Windows are untried by the author (CI entries
-exist and are marked unverified). The default build is pure Rust. The original B06
+on 2026-10-18 with the committed `Cargo.lock` and has a CI job; newer dependency
+versions are not covered. The 76 tests and 7 doc-tests also passed once on macOS (Apple silicon, Rust 1.98.1, 2026-10-18, no CI);
+Windows not run (CI entries for both exist and are marked unverified). The default build is pure Rust. The original B06
 trade samples were zstd-compressed Parquet; to read inputs like that, build
 `gqodb-blocks` with `--features zstd-input`, which adds the native zstd library from
 crates.io. It only decodes inputs and is never one of the measured codecs.
@@ -244,10 +244,15 @@ Run 2 is the main result; run 1 is kept for comparison and is not hidden. They d
 the stored samples, the registered thresholds would have left every cell of run 2 below 15 valid rounds. Second, two
 cells of run 2 are UNDERPOWERED even under A-004: D2/v1 (11 valid rounds) and D2/v2 (12), because unrelated jobs
 on the shared host kept landing on the benchmark core's hyperthread sibling; the D2 rows below therefore rest on 11 rounds
-(run 1 had 15 there, with matching ratios). Third, after the limit fix `decode` makes one extra pass over each string
-column and `encode` one comparison per string row; every time median of run 2 is 0.4% to 7% lower than in run 1 for
-GQODB and the baselines moved in the same direction (the machine state differed), so an effect of a percent or two
-cannot be ruled out. Fourth, the receipt of run 2 names `c07fbde`, which is in this history; run 1's receipt names a commit that is not
+(run 1 had 15 there, with matching ratios). Over all measured rounds, flagged ones included, 22 of the 864 verdicts of run 2 change, one of them on a
+headline cell (D2 warm range read against `clickhouse-default`, better to inconclusive). Third, after the limit fix `decode` makes one extra pass over each string
+column and `encode` one comparison per string row. Every operation-time median of run 2 is 0.4% to 7% lower than in run 1
+for GQODB, and the Parquet and DuckDB baselines moved the same way (the machine state differed), so absolute medians cannot show
+the effect. Corrected against the Rust Parquet candidates measured in the same rounds, GQODB full reads are about 0.5% to
+1.5% slower in run 2 than in run 1 (cold reads: 24 of 24 candidate-and-cell pairs above 1, median +1.3%; warm reads:
+median +0.7%), which fits the extra pass; no verdict changes. The sentence in run 2's assessment that the effect is not
+visible is superseded by this drift-corrected comparison (addendum A-005; the assessment is sealed and was not edited).
+Fourth, the receipt of run 2 names `c07fbde`, which is in this history; run 1's receipt names a commit that is not
 (addendum A-005).
 
 Baselines: four Parquet configurations written by the same Rust library, DuckDB 1.5.6 (native file and three
@@ -263,12 +268,12 @@ GQODB); the verdict uses a 2% band for bytes, 5% for time and 10% for memory.
 | D1 | 60 s range read, warm | 3.2 ms | `parquet-delta-bss-lz4`, 4.1 ms | 0.772 [0.76, 0.79] | better |
 | D1 | Peak memory, write | 72.6 MiB | `duckdb-parquet-matched`, 17.1 MiB | 4.244 [4.12, 4.30] | **worse** |
 | D1 | Peak memory, full read | 68.1 MiB | `parquet-delta-bss-snappy`, 68.8 MiB | 0.990 [0.99, 0.99] | equivalent |
-| D2 | Stored bytes | 6.21 MB | `duckdb-parquet-zstd`, 7.63 MB | 0.814 | better |
-| D2 | Durable write | 228.5 ms | `parquet-delta-bss-snappy`, 250.0 ms | 0.914 [0.90, 0.92] | better |
-| D2 | Full read, warm | 66.5 ms | `parquet-delta-bss-lz4`, 77.8 ms | 0.855 [0.85, 0.87] | better |
-| D2 | 60 s range read, warm | 3.2 ms | `parquet-delta-bss-snappy`, 4.1 ms | 0.786 [0.78, 0.79] | better |
-| D2 | Peak memory, write | 72.5 MiB | `duckdb-parquet-matched`, 17.4 MiB | 4.175 [4.15, 4.21] | **worse** |
-| D2 | Peak memory, full read | 68.1 MiB | `parquet-delta-bss-snappy`, 68.8 MiB | 0.991 [0.99, 0.99] | equivalent |
+| D2 (n = 11, underpowered) | Stored bytes | 6.21 MB | `duckdb-parquet-zstd`, 7.63 MB | 0.814 | better |
+| D2 (n = 11, underpowered) | Durable write | 228.5 ms | `parquet-delta-bss-snappy`, 250.0 ms | 0.914 [0.90, 0.92] | better |
+| D2 (n = 11, underpowered) | Full read, warm | 66.5 ms | `parquet-delta-bss-lz4`, 77.8 ms | 0.855 [0.85, 0.87] | better |
+| D2 (n = 11, underpowered) | 60 s range read, warm | 3.2 ms | `parquet-delta-bss-snappy`, 4.1 ms | 0.786 [0.78, 0.79] | better |
+| D2 (n = 11, underpowered) | Peak memory, write | 72.5 MiB | `duckdb-parquet-matched`, 17.4 MiB | 4.175 [4.15, 4.21] | **worse** |
+| D2 (n = 11, underpowered) | Peak memory, full read | 68.1 MiB | `parquet-delta-bss-snappy`, 68.8 MiB | 0.991 [0.99, 0.99] | equivalent |
 
 **GQODB does not win every axis, and the earlier headline "wins every axis" is withdrawn.** On this input it is the
 smallest layout and, with the exceptions below, the fastest on write, full read and the time-window read, but:
@@ -278,12 +283,13 @@ the matched LZ4 writer in the table) and 4.5 to 5.0 times that of the DuckDB def
 adapter reads the whole source table into memory before writing, for every Rust candidate including the Rust Parquet
 writers (which therefore sit at the same level), while DuckDB streams its input. Further: full-read memory on the full months
 is 2.5 to 3.0 times that of the ClickHouse engine process (not measured like for like); the warm range read against
-ClickHouse is inconclusive in 7 of 16 headline-slice and full-month cells, none worse (for example 0.51 against `clickhouse-default` on D1;
-the window holds only 45 and 468 rows, and the ClickHouse operation time is wall time minus process start-up floored
+ClickHouse is inconclusive in 7 of 16 cells, none worse, with point estimates from 0.33 to 1.24 (1.24 for S2/v1 against `clickhouse-default` is
+no win; the window holds only 45 and 468 rows, and the ClickHouse operation time is wall time minus process start-up floored
 at zero: 141 of its 932 range-read samples record 0, so these ratios are noise in both directions); in V2
-(prices as scaled integers) the write-time advantage over the Rust Parquet writers shrinks to equivalent or slightly worse (1.06 against
-`parquet-delta-bss-snappy` on D1, worse), and the CPU time of the write is worse than `parquet-delta-bss-snappy` on D1 in
-V2 (1.07). The margins against the strongest baseline are 9 to 25% in time, not factors. The large
+(prices as scaled integers) the write-time advantage over the delta/BSS LZ4 and Snappy Parquet writers shrinks to equivalent or slightly worse
+(about 1.0 to 1.06; 1.06 against `parquet-delta-bss-snappy` on D1, worse; against the dictionary-LZ4 and Brotli writers it stays at 0.25 to 0.46), and the CPU time of the write is worse than `parquet-delta-bss-snappy` on D1 in
+V2 (1.07). The margins against the strongest Parquet configuration (V1) are 9 to 25% in time, not factors; against ClickHouse, whose range reads
+are noisy, see the point estimates above. The large
 factors in the full assessment are mostly against baselines in their default settings (for example ClickHouse default is
 3.6 to 3.9 times larger) and, for ClickHouse full reads (0.23 to 0.29), against its process model: one process per
 statement, the result handed to the client as Arrow IPC through a pipe. The end-to-end columns are not comparable for
@@ -292,7 +298,7 @@ DuckDB (1.10 to 1.27) while the operation time is better. Every cell, loss and c
 [assessment](results/b17-public-trades-20261018/ASSESSMENT.md).
 
 **Run 1 against run 2** (headline slices, V1; ratio GQODB / strongest baseline of that run, same axes and bands). Run 1's
-assessment is [here](results/b17-public-trades-20261017/ASSESSMENT.md).
+assessment is [here](results/b17-public-trades-20261017/ASSESSMENT.md). The label "n = 11" on the D2 rows refers to run 2; run 1 had 15 valid rounds there.
 
 | Slice | Axis | Run 1 ratio | Run 2 ratio | Run 1 verdict | Run 2 verdict |
 | --- | --- | --- | --- | --- | --- |
@@ -302,12 +308,12 @@ assessment is [here](results/b17-public-trades-20261017/ASSESSMENT.md).
 | D1 | 60 s range read, warm | 0.791 (`parquet-delta-bss-lz4`) | 0.772 (`parquet-delta-bss-lz4`) | better | better |
 | D1 | Peak memory, write | 4.261 (`duckdb-parquet-matched`) | 4.244 (`duckdb-parquet-matched`) | worse | worse |
 | D1 | Peak memory, full read | 0.990 (`parquet-delta-bss-snappy`) | 0.990 (`parquet-delta-bss-snappy`) | equivalent | equivalent |
-| D2 | Stored bytes | 0.814 (`duckdb-parquet-zstd`) | 0.814 (`duckdb-parquet-zstd`) | better | better |
-| D2 | Durable write | 0.905 (`parquet-delta-bss-snappy`) | 0.914 (`parquet-delta-bss-snappy`) | better | better |
-| D2 | Full read, warm | 0.843 (`parquet-delta-bss-lz4`) | 0.855 (`parquet-delta-bss-lz4`) | better | better |
-| D2 | 60 s range read, warm | 0.798 (`parquet-delta-bss-lz4`) | 0.786 (`parquet-delta-bss-snappy`) | better | better |
-| D2 | Peak memory, write | 4.203 (`duckdb-parquet-matched`) | 4.175 (`duckdb-parquet-matched`) | worse | worse |
-| D2 | Peak memory, full read | 0.989 (`parquet-delta-bss-snappy`) | 0.991 (`parquet-delta-bss-snappy`) | equivalent | equivalent |
+| D2 (n = 11, underpowered) | Stored bytes | 0.814 (`duckdb-parquet-zstd`) | 0.814 (`duckdb-parquet-zstd`) | better | better |
+| D2 (n = 11, underpowered) | Durable write | 0.905 (`parquet-delta-bss-snappy`) | 0.914 (`parquet-delta-bss-snappy`) | better | better |
+| D2 (n = 11, underpowered) | Full read, warm | 0.843 (`parquet-delta-bss-lz4`) | 0.855 (`parquet-delta-bss-lz4`) | better | better |
+| D2 (n = 11, underpowered) | 60 s range read, warm | 0.798 (`parquet-delta-bss-lz4`) | 0.786 (`parquet-delta-bss-snappy`) | better | better |
+| D2 (n = 11, underpowered) | Peak memory, write | 4.203 (`duckdb-parquet-matched`) | 4.175 (`duckdb-parquet-matched`) | worse | worse |
+| D2 (n = 11, underpowered) | Peak memory, full read | 0.989 (`parquet-delta-bss-snappy`) | 0.991 (`parquet-delta-bss-snappy`) | equivalent | equivalent |
 
 Across all 864 comparisons of the eight cells (GQODB against each baseline on each axis, including secondary axes),
 26 verdicts differ between the runs: 15 are range reads against ClickHouse (3 to 7 ms, noisy), and the rest sit
@@ -326,7 +332,9 @@ handful of per-trade values, and whether the aggregates fall under the share-ali
 and comply with those terms. Binance does not sponsor or endorse this project or these results.
 
 Rerun it: `./benchmarks/run.sh public-trades` (needs DuckDB and ClickHouse from
-`benchmarks/baselines/install_tools.py`; the timed matrix takes a few hours).
+`benchmarks/baselines/install_tools.py`; the timed matrix takes a few hours). In the CI job the B17 digest and end-to-end tests
+are skipped when `pyarrow` and `duckdb` are not installed, which is how that job runs (installing them there was left out on purpose);
+the offline fixtures, the Rust adapter tests and the evidence verifier still run.
 
 <details>
 <summary><b>B06: the earlier in-memory codec comparison (historical, no receipts)</b></summary>
@@ -413,8 +421,8 @@ dictionary-LZ4 Parquet, at 14.3–14.5% longer decode than that Parquet baseline
 | Instruments and venues beyond Bybit levels, Binance ETH/UNI trades (B06) and Binance PAXGUSDT trades (B17) | *not measured* |
 | Multi-threaded, concurrent or networked use; other hosts | *not measured* — B17 is one thread on one host |
 | kdb+ / q | no comparison published |
-| Rust versions other than 1.85.0 and 1.96.0, Windows and macOS | *Linux only* — only 1.85.0 (the declared minimum) and 1.96.0 were built and tested, on Linux on 2026-10-17 with the committed `Cargo.lock`; no CI run exists yet; Windows and macOS *not run* |
-| Adversarial fuzzing of the readers | *partly done* — 15 libFuzzer targets (block, store, codec and Parquet readers, round trips), each at least 35 minutes (Parquet 2 x 60) on one machine with AddressSanitizer: 9 defects fixed, 0 open; after the last fix (a 128 MiB limit on decoded string bytes in the unchecked decoding layer) the 10 targets that reach that code were re-run for about 11 minutes each without findings. Not exhaustive, and the unchecked layer is not audited — see [docs/FUZZING.md](docs/FUZZING.md) |
+| Rust versions other than 1.85.0 and 1.96.0, Windows, any CI run | *Linux, plus one macOS run* — only 1.85.0 (the declared minimum) and 1.96.0 were built and tested, on Linux on 2026-10-18 with the committed `Cargo.lock`; the 76 tests and 7 doc-tests also passed once on macOS (Apple silicon, Rust 1.98.1, 2026-10-18, no CI); Windows not run; no CI run exists yet |
+| Adversarial fuzzing of the readers | *partly done* — 15 libFuzzer targets (block, store, codec and Parquet readers, round trips), each at least 35 minutes (Parquet 2 x 60) on one machine with AddressSanitizer: 9 defects fixed (8 found by fuzzing, 1 by reading the code), 0 open; after the last fix (a 128 MiB limit on decoded string bytes in the unchecked decoding layer) the 10 targets that reach that code were re-run for about 11 minutes each without findings. Not exhaustive, and the unchecked layer is not audited — see [docs/FUZZING.md](docs/FUZZING.md) |
 
 ## Evidence
 
