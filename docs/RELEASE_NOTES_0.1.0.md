@@ -21,7 +21,7 @@ Licence: Apache-2.0. Date: to be filled in by the owner when the tag is created.
   a corrupt frame; recovery writes a new file. See `docs/B02_FORMAT.md` and
   `docs/BLOCK_PROTOCOL.md`. Nanosecond units do not imply nanosecond accuracy.
 - **Evidence verifier.** `results/verify_public_evidence.py` checks the stored results
-  against their build receipts (23 receipted result files) and recomputes the B11, B15
+  against their build receipts (28 receipted result files) and recomputes the B11, B15
   and B17 summaries (B06 in part) from them; the B12 and B13 figures are not recomputed.
   `benchmarks/verify_manifest.py` checks that every declared benchmark file is tracked.
 - **Source installer.** `./install.sh` builds, tests and installs `gqodb-codec` and
@@ -41,36 +41,39 @@ redistributed: you can check the receipted result files against their receipts a
 recompute the B11, B15 and B17 figures from the stored results, but re-running B11-B15
 from scratch needs a Bybit capture of your own.
 
-Tested toolchain: Rust 1.96.0, Linux x86_64 (integration run on 18 October 2026: 65 tests
-passed, 0 failed, 1 ignored; the `zstd-input` build is green too; 23 receipted files
+Tested toolchain: Rust 1.96.0, Linux x86_64 (integration run on 18 October 2026: 76 tests
+passed, 0 failed, 0 ignored; the `zstd-input` build is green too; 28 receipted files
 verify). The 7 doc-tests are not part of that count.
 
-**Trades (B17).** `results/b17-public-trades-20261017`: Binance aggregate trades of
+**Trades (B17).** `results/b17-public-trades-20261018` (run 2, the main result, measured on commit `c07fbde`,
+the code that is released; run 1, `results/b17-public-trades-20261017`, used the same protocol on an earlier commit,
+before the limit on decoded string bytes was added, and is kept for comparison): Binance aggregate trades of
 PAXGUSDT (spot, 2025-10 and 2026-02), the first 1,048,576 rows of each month (D1, D2) and
 both full months (3.1 and 3.7 million rows). Real files written durably, read fully and by
-a 60-second time window; single thread, one pinned core, a fresh process per sample, 15
+a 60-second time window; single thread, one pinned core, a fresh process per sample, up to 15
 unflagged measured rounds after 3 warm-ups, medians with a block-bootstrap 95% interval.
 Baselines: four Rust Parquet configurations, DuckDB 1.5.6 (native file and three Parquet
 writers) and ClickHouse 26.3 (MergeTree, default and one pre-registered codec chain). The
 protocol was pre-registered and hash-pinned; addendum A-004 is an amendment (interference
-thresholds and repeat budget) made after a first start was aborted; with the registered
-rules every cell would have been UNDERPOWERED. Input: Binance Vision, CC BY-NC-SA 4.0, not
+thresholds and repeat budget) made after a first start of run 1 was aborted; with the registered
+rules every cell would have been UNDERPOWERED, and two cells of run 2 (D2/v1 with 11 valid rounds, D2/v2 with 12)
+are UNDERPOWERED even with the amended rules. Input: Binance Vision, CC BY-NC-SA 4.0, not
 redistributed; aggregates only.
 
 | Slice | Axis | GQODB | Strongest baseline | Ratio | Verdict |
 | --- | --- | ---: | --- | ---: | --- |
 | D1 | Stored bytes | 6.51 MB | `duckdb-parquet-zstd`, 6.70 MB | 0.972 | better |
-| D1 | Durable write | 232.7 ms | `parquet-delta-bss-snappy`, 259.2 ms | 0.898 | better |
-| D1 | Full read, warm | 67.8 ms | `parquet-delta-bss-lz4`, 82.6 ms | 0.821 | better |
-| D1 | 60 s range read, warm | 3.3 ms | `parquet-delta-bss-lz4`, 4.2 ms | 0.791 | better |
-| D1 | Peak memory, write | 72.6 MiB | `duckdb-parquet-matched`, 17.0 MiB | 4.261 | worse |
-| D1 | Peak memory, full read | 68.2 MiB | `parquet-delta-bss-snappy`, 68.9 MiB | 0.990 | equivalent |
+| D1 | Durable write | 225.2 ms | `parquet-delta-bss-snappy`, 253.6 ms | 0.888 | better |
+| D1 | Full read, warm | 65.5 ms | `parquet-delta-bss-lz4`, 81.2 ms | 0.806 | better |
+| D1 | 60 s range read, warm | 3.2 ms | `parquet-delta-bss-lz4`, 4.1 ms | 0.772 | better |
+| D1 | Peak memory, write | 72.6 MiB | `duckdb-parquet-matched`, 17.1 MiB | 4.244 | worse |
+| D1 | Peak memory, full read | 68.1 MiB | `parquet-delta-bss-snappy`, 68.8 MiB | 0.990 | equivalent |
 | D2 | Stored bytes | 6.21 MB | `duckdb-parquet-zstd`, 7.63 MB | 0.814 | better |
-| D2 | Durable write | 231.5 ms | `parquet-delta-bss-snappy`, 255.7 ms | 0.905 | better |
-| D2 | Full read, warm | 66.7 ms | `parquet-delta-bss-lz4`, 79.1 ms | 0.843 | better |
-| D2 | 60 s range read, warm | 3.3 ms | `parquet-delta-bss-lz4`, 4.1 ms | 0.798 | better |
-| D2 | Peak memory, write | 72.5 MiB | `duckdb-parquet-matched`, 17.2 MiB | 4.203 | worse |
-| D2 | Peak memory, full read | 68.2 MiB | `parquet-delta-bss-snappy`, 68.9 MiB | 0.989 | equivalent |
+| D2 | Durable write | 228.5 ms | `parquet-delta-bss-snappy`, 250.0 ms | 0.914 | better |
+| D2 | Full read, warm | 66.5 ms | `parquet-delta-bss-lz4`, 77.8 ms | 0.855 | better |
+| D2 | 60 s range read, warm | 3.2 ms | `parquet-delta-bss-snappy`, 4.1 ms | 0.786 | better |
+| D2 | Peak memory, write | 72.5 MiB | `duckdb-parquet-matched`, 17.4 MiB | 4.175 | worse |
+| D2 | Peak memory, full read | 68.1 MiB | `parquet-delta-bss-snappy`, 68.8 MiB | 0.991 | equivalent |
 
 GQODB does not win every axis and the earlier headline "wins every axis" is withdrawn.
 Losses: the peak memory of the write is 2.2 to 4.3 times that of the DuckDB Parquet writers
@@ -78,12 +81,14 @@ on the slices and up to 5.0 times that of DuckDB's default Parquet writer on the
 (that is the adapter path, which reads the whole table into memory first for every Rust
 candidate, not a property of the format); full-read memory on the full months is 2.5 to 3.0
 times that of the ClickHouse engine process (not like for like); the warm range read against
-ClickHouse is inconclusive in 8 of 16 cells (ClickHouse range operation times are often 0 and
+ClickHouse is inconclusive in 7 of 16 cells (ClickHouse range operation times are often 0 and
 these ratios are noise); in V2 the write-time advantage over the Rust Parquet writers
-disappears (1.03 to 1.05 on D1) and the CPU time of the write against `parquet-delta-bss-snappy`
-is worse on D1 (1.07). The receipt names commit `3323f73`, which is not in this repository's
-history, and reader fixes made after the measurement changed some measured code (addendum A-005);
-the figures were not re-measured.
+disappears (1.06 against `parquet-delta-bss-snappy` on D1, worse) and the CPU time of the write against
+`parquet-delta-bss-snappy` is worse on D1 (1.07). Run 1 and run 2 agree: 26 of 864 verdicts differ, 15 of them
+range reads against ClickHouse, and none of the stored-bytes verdicts; the run-2 medians are 0.4% to 7% lower than
+run 1's for GQODB and for the baselines alike (a different machine state), so the extra pass over string columns
+added by the limit fix is not visible, but an effect of a percent or two cannot be excluded. The run-2 receipt names
+`c07fbde`, which is in this history; run 1's receipt names a commit that is not (addendum A-005).
 
 **Trades (B06, historical, superseded by B17).** `results/b06`: 1,048,576 aggregate trades per
 sample (32 blocks), in-memory codec passes, one warm-up and nine measured passes per mode,

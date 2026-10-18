@@ -146,60 +146,66 @@ a reader who prefers the registered thresholds can recompute from the stored per
    set-aside checkpoint also holds the timings of the first rounds, it is not published, and
    nothing in this repository can show that they were not looked at.
 
-## A-005, 2026-10-18, after the measurement: the receipt commit and the measured code in this history
+## A-005, 2026-10-18, run 2 on the released commit; what run 1 measured
 
-State of knowledge: the B17 run (A-003, A-004) was finished and sealed on 2026-10-17. Afterwards the
-public history was rebuilt as a short series of commits from the final tree. Nothing was measured
-again.
+State of knowledge: run 1 (A-003, A-004) was finished and sealed on 2026-10-17. Afterwards the public history
+was rebuilt as a short series of commits from the final tree, and fixes found by fuzzing changed code that run 1
+had measured. To make every figure apply to the code that is released, the whole matrix was measured again on
+2026-10-18 (**run 2**); run 1 is kept next to it.
 
-1. The receipt (`results/b17-public-trades-20261017/BUILD_RECEIPTS.json`) names the commit the run was
-   built from, `3323f73c06f8076b6f5054783e02043a6c3c55a3`. That commit is part of the private development
-   history and is not in this repository (the same holds for the commit ids in the B13 and B15
-   receipts). The measured code is identified here by git object hashes instead. One identity can be
-   checked without that history: `sha256sum Cargo.lock` equals `cargo_lock_sha256` in the receipt.
-2. Paths that were equal at the measured commit. In this history, the commit with the subject
-   `feat(bench): B17 public-trades tooling ...` (the tooling commit; the next commit only adds the
-   results, the addenda, the manifest and the evidence-verifier script) has exactly these object hashes, taken from the measured
-   commit; `git rev-parse <commit>:<path>` shows them:
+1. **Run 2 is the main result.** `results/b17-public-trades-20261018/`; its receipt names commit
+   `c07fbde0e869aa13ed178636eb39e564c9b5898c`, which is part of this repository's history, and states a clean
+   working tree. Same protocol file (sha256 `421966af...`), same addenda A-001 to A-004, same cells (D1, D2, S1, S2,
+   V1, V2), same candidates and settings, same thresholds and repeat budget (A-004), same code of the harness and
+   the adapters: nothing was changed. Differences in the set-up, none of which can steer a verdict: a new
+   working directory; the cached converted inputs of run 1 were reused after their sha256 had been checked against
+   the pinned archive checksums and against the receipts recorded with them; the declared foreign cores are CPUs 6 and
+   20 only, as in the protocol (run 1 also declared four cores of a concurrent fuzzing job, which had finished); the measurement
+   binaries were built before the run and no build ran during it. The run took three hours. Other processes on the machine
+   (not controlled) disturbed it more than run 1: 96 of 209 measured rounds were flagged and repeated,
+   and two cells, D2/v1 (11 valid rounds) and D2/v2 (12), ended UNDERPOWERED after the repeat budget was spent. The cells were not
+   repeated and no setting was changed to remove the difference. The two runs agree within a few percent on every axis against the
+   strongest baseline (README, comparison table); the assessment of run 2 states the limits.
+2. **What changed in the measured code between the runs.** `c07fbde` contains the limit on decoded string bytes
+   (`crates/gqodb-blocks/prototype/src/real.rs`, commit `dcf562b`): `real::decode` makes one extra pass over the id
+   vector of each string column and `real::encode` one saturating addition and comparison per string row. That is the
+   only change on the path of the B17 adapters; no format change (the encoder output of 517 reproducible encodings is identical
+   before and after). Run 2 vs run 1 shows no slowdown that stands out against the drift between the runs
+   (GQODB time medians 0.4% to 7% lower, the baselines' similar); an effect of a percent or two is not excluded.
+3. **Run 1's receipt commit is not in this history.** `results/b17-public-trades-20261017/BUILD_RECEIPTS.json` names
+   `3323f73c06f8076b6f5054783e02043a6c3c55a3`, a commit of the private development history (as do the B13 and B15
+   receipts). That run is identified here by git object hashes instead; `sha256sum Cargo.lock` equals
+   `cargo_lock_sha256` in the receipt. Paths that were equal at that commit (the tooling commit of this history, `feat(bench): B17
+   public-trades tooling ...`, has them):
 
-   | Path | Object hash at the measured commit | Tooling commit | Final tree |
-   | --- | --- | --- | --- |
-   | `Cargo.toml` | `27fc0b1a2bd2f43642a3da3e687c43c613c1ab10` | equal | equal |
-   | `Cargo.lock` | `13a7a009a3a086e79ed6e668b1b2247604bfa89a` | equal | equal |
-   | `crates` | `4d78f7a2f33beccd2d67d45025b96e99feca2587` | equal | **differs** (`f6778cdffa88450f3604766997b0386e968f34b8`) |
-   | `benchmarks/baselines` | `9eeebd205969b4465c71eab51d32d4264ce7abde` | equal | equal |
-   | `benchmarks/public_trades/common.py` | `86094f91814b01f049a7a843d5010703c12372f8` | equal | equal |
-   | `benchmarks/public_trades/harness.py` | `a6a00069031e8c31dc5ef63ffb160c8074e9a778` | equal | equal |
-   | `benchmarks/public_trades/report.py` | `86a1db94cfd3834b820caae73a4913d9dd67b14d` | equal | equal |
-   | `benchmarks/public_trades/stats.py` | `27567e6fcb4e6bc090da3ae41cea009f30e19a72` | equal | equal |
-   | `benchmarks/public_trades/fetch.sh` | `29688dd7ce4147fdc942ee3dabdaa682600a24c3` | equal | equal |
+   | Path | Object hash at run 1's commit | Final tree |
+   | --- | --- | --- |
+   | `Cargo.toml` | `27fc0b1a2bd2f43642a3da3e687c43c613c1ab10` | equal |
+   | `Cargo.lock` | `13a7a009a3a086e79ed6e668b1b2247604bfa89a` | equal |
+   | `crates` | `4d78f7a2f33beccd2d67d45025b96e99feca2587` | **differs** (crates.io metadata, per-crate licence files, doc comments and examples, the fixes of `docs/FUZZING.md` and the string-bytes limit) |
+   | `benchmarks/baselines` | `9eeebd205969b4465c71eab51d32d4264ce7abde` | equal |
+   | `benchmarks/public_trades/common.py` | `86094f91814b01f049a7a843d5010703c12372f8` | equal |
+   | `benchmarks/public_trades/harness.py` | `a6a00069031e8c31dc5ef63ffb160c8074e9a778` | equal |
+   | `benchmarks/public_trades/report.py` | `86a1db94cfd3834b820caae73a4913d9dd67b14d` | equal |
+   | `benchmarks/public_trades/stats.py` | `27567e6fcb4e6bc090da3ae41cea009f30e19a72` | equal |
+   | `benchmarks/public_trades/fetch.sh` | `29688dd7ce4147fdc942ee3dabdaa682600a24c3` | equal |
 
-   The tooling commit also carries the B17 Python tests, the fixtures, the runner script and the
-   workflow as they were at the measured commit (the manifest and its checker follow in the next
-   commit), with two exceptions: `verify_b17.py` and `tests/test_b17_public_trades.py`
-   no longer contain the name patterns that the first version of the verifier used; they check
-   generic leak patterns instead (absolute home paths, carrier-grade-NAT addresses of the kind VPN
-   overlays use, e-mail addresses, private-key blocks).
-3. Paths that differ between the measured commit and the final tree. Under the paths in the table:
-   - `benchmarks/public_trades/verify_b17.py` (generic leak patterns; accepts a redacted result file that
-     is listed in `results/PUBLIC_REDACTION.json`) and `benchmarks/public_trades/README.md` (status and
-     wording). Neither runs during a measurement.
-   - `crates/*/Cargo.toml` (crates.io metadata; `gqodb-blocks` also registers the `malformed` test
-     target), new `LICENSE` and `NOTICE` files per crate, `crates/*/README.md`, and comments and doc
-     examples in `crates/*/prototype/src/lib.rs` and `gqodb-types/.../timing.rs`. After removing comment
-     lines, the code of those five source files is identical to the measured one.
-   - New tests: `crates/gqodb-blocks/prototype/tests/malformed.rs` and ten inputs under
-     `crates/gqodb-blocks/prototype/tests/regressions/`.
-   - **Code changed after the measurement:** `crates/gqodb-blocks/prototype/src/parquet.rs` and
-     `crates/gqodb-blocks/prototype/src/real.rs`, by the fixes found by fuzzing (`docs/FUZZING.md`,
-     fixes 1 to 8). Reading the call graph of the B17 adapters: `trades_candidate` writes and reads its
-     four Rust Parquet configurations with the `parquet` crate directly and imports only `Mode` from
-     `gqodb_blocks`, so `parquet.rs` and the Parquet branches of `real.rs` are not executed by those
-     candidates; the GQODB candidate goes through `gqodb_store::Writer` and `Reader`, which call
-     `real::encode` and `real::Decoder` with the GQODB mode, and on that path the only change is the
-     added condition `end >= 12 &&` before a subtraction in `decode_with_scratch` (fix 1). That is a
-     reading of the code and not a measurement: the effect on timings was not measured, and the B17
-     figures were not re-measured on the final tree.
-4. The A-004 numbers and labels were recomputed on the same day (see A-004, items 5 and 6), and the
-   wording of `ASSESSMENT.md` was corrected; both are listed under `text_corrections` in
-   `results/PUBLIC_REDACTION.json`.
+   Between run 1's commit and `c07fbde` the code that the B17 adapters execute changed only in `real.rs` and `parquet.rs`
+   (fuzz fixes, then the string-bytes limit): `trades_candidate` writes and reads its four Rust Parquet configurations with the
+   `parquet` crate directly and imports only `Mode` from `gqodb_blocks`; the GQODB candidate goes through `gqodb_store::Writer`
+   and `Reader`, which call `real::encode` and `real::Decoder`. Run 2 supersedes the reading of the call graph that run 1 needed.
+4. **Run 2 against the final tree.** The commits after the measurement touch only `results/`, `docs/`, `README.md`,
+   `CHANGELOG.md`, `benchmarks/manifest.json`, `benchmarks/README.md`, `benchmarks/verify_manifest.py`, the badges and the B17 tests. Object hashes
+   (`git rev-parse <commit>:<path>`) of the measured commit `c07fbde` and of the final tree are equal for `crates`, `Cargo.toml`, `Cargo.lock`,
+   `benchmarks/baselines` and `benchmarks/public_trades`:
+
+   | Path | Object hash at `c07fbde` and at the final tree |
+   | --- | --- |
+   | `crates` | `0f3dc231f843731c14444104944d78d7c48c239b` |
+   | `Cargo.toml` | `27fc0b1a2bd2f43642a3da3e687c43c613c1ab10` |
+   | `Cargo.lock` | `13a7a009a3a086e79ed6e668b1b2247604bfa89a` |
+   | `benchmarks/baselines` | `9eeebd205969b4465c71eab51d32d4264ce7abde` |
+   | `benchmarks/public_trades` | `ea2f4290f628c9483b9dbe507a0f6276d181a843` |
+5. The A-004 numbers and labels of run 1 were recomputed on 2026-10-18, and the wording of run 1's `ASSESSMENT.md` was corrected;
+   both are listed under `text_corrections` in `results/PUBLIC_REDACTION.json`. Run 2's `ASSESSMENT.md` was written once,
+   before sealing, and needs no redaction record.
