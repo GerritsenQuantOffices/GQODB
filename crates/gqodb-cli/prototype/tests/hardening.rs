@@ -1,7 +1,12 @@
 mod support;
 
+use gqodb_cli::cli::{Flags, repl, run_text};
 use gqodb_cli::exec::{ExecError, Executor, FileExecutor, Options, SkipReason, discover};
+use gqodb_lang::Session;
+use std::io::Read;
+use std::path::Path;
 use std::process::{Command, Stdio};
+use std::time::{Duration, Instant};
 use support::*;
 
 fn rows(n: i64) -> Vec<Trade> {
@@ -484,4 +489,519 @@ fn every_output_block_in_the_language_reference_is_what_the_command_prints() {
         compared >= 15,
         "LANGUAGE.md has 15 runnable example blocks, found {compared}"
     );
+}
+
+// ---- the fix wave after the final review: group 1 ----
+
+fn read(path: &Path) -> String {
+    std::fs::read_to_string(path).unwrap()
+}
+
+/// Runs the closure on a thread and fails (instead of hanging the suite) when it does not finish in time.
+fn within<T: Send + 'static>(seconds: u64, f: impl FnOnce() -> T + Send + 'static) -> T {
+    let (tx, rx) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        let _ = tx.send(f());
+    });
+    rx.recv_timeout(Duration::from_secs(seconds))
+        .expect("did not finish in time (a hang?)")
+}
+
+/// Runs `gqodb`, keeps at most `limit` bytes of standard error and kills the process when there is more.
+/// Returns (exit code or None when killed, standard error, whether it had more than `limit` bytes).
+fn run_capped(args: &[String], limit: usize) -> (Option<i32>, Vec<u8>, bool) {
+    let mut child = gqodb()
+        .args(args)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let mut buf = Vec::new();
+    child
+        .stderr
+        .take()
+        .unwrap()
+        .take(limit as u64 + 1)
+        .read_to_end(&mut buf)
+        .unwrap();
+    let exceeded = buf.len() > limit;
+    if exceeded {
+        let _ = child.kill();
+    }
+    let status = child.wait().unwrap();
+    (status.code(), buf, exceeded)
+}
+
+#[test]
+fn out_defaults_to_csv_even_when_standard_output_is_a_terminal() {
+    let dir = TempDir::new();
+    write_trades(&dir.path("a.gqodb.tick"), &[rows(3)], None, 5, 2);
+    let target = dir.path("res.csv");
+    let flags = Flags {
+        out: Some(target.display().to_string()),
+        ..Flags::default()
+    };
+    let (mut o, mut e) = (Vec::new(), Vec::new());
+    let tty = true;
+    let code = run_text(
+        &format!(
+            "show trades EURUSD in {} | take 2 | columns sequence",
+            dir.s()
+        ),
+        &mut Session::default(),
+        &flags,
+        tty,
+        &mut o,
+        &mut e,
+    );
+    assert_eq!(code, 0, "{}", String::from_utf8_lossy(&e));
+    assert_eq!(
+        read(&target),
+        "sequence\n1\n2\n",
+        "a file is CSV, not a table"
+    );
+    assert!(o.is_empty());
+}
+
+#[test]
+fn a_failed_run_leaves_no_out_file_and_a_repeat_works() {
+    let dir = TempDir::new();
+    write_trades(&dir.path("a.gqodb.tick"), &[rows(4)], None, 5, 2);
+    let target = dir.path("res.csv");
+    let t = target.display().to_string();
+    let o = gqodb()
+        .args(["--out", &t, "show trades EURUSD in /no/such/dir"])
+        .output()
+        .unwrap();
+    assert_eq!(o.status.code(), Some(1));
+    assert!(!target.exists(), "a failed run leaves no file behind");
+    let q = format!("show trades EURUSD in {} | columns sequence", dir.s());
+    let o = gqodb().args(["--out", &t, &q]).output().unwrap();
+    assert_eq!(
+        o.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&o.stderr)
+    );
+    assert_eq!(read(&target), "sequence\n1\n2\n3\n4\n");
+}
+
+#[test]
+fn a_damaged_file_leaves_no_out_file_unless_skip_bad_or_strict_made_it_a_result() {
+    let dir = TempDir::new();
+    write_trades(&dir.path("a.gqodb.tick"), &[rows(4)], None, 5, 2);
+    write_trades(&dir.path("b.gqodb.tick"), &[rows(4)], None, 5, 2);
+    let bytes = std::fs::read(dir.path("b.gqodb.tick")).unwrap();
+    std::fs::write(dir.path("b.gqodb.tick"), &bytes[..bytes.len() - 7]).unwrap();
+    let q = format!("show trades EURUSD in {} | columns sequence", dir.s());
+    let target = dir.path("res.csv");
+    let t = target.display().to_string();
+    let o = gqodb().args(["--out", &t, &q]).output().unwrap();
+    assert_eq!(o.status.code(), Some(1));
+    assert!(
+        !target.exists(),
+        "rows of a were written before b failed: that file must not stay"
+    );
+    let o = gqodb()
+        .args(["--skip-bad", "--out", &t, &q])
+        .output()
+        .unwrap();
+    assert_eq!(o.status.code(), Some(1));
+    assert_eq!(
+        read(&target),
+        "sequence\n1\n2\n3\n4\n",
+        "with --skip-bad the result stays, and exit 1 plus the notice say b was skipped"
+    );
+    std::fs::remove_file(&target).unwrap();
+    let o = gqodb()
+        .args(["--skip-bad", "--max-rows", "2", "--strict", "--out", &t, &q])
+        .output()
+        .unwrap();
+    assert_eq!(o.status.code(), Some(3));
+    assert_eq!(
+        read(&target),
+        "sequence\n1\n2\n",
+        "a truncated result stays, exit 3"
+    );
+}
+
+fn gqodb_stdin_bytes(args: &[&str], input: &[u8]) -> std::process::Output {
+    use std::io::Write;
+    let mut child = gqodb()
+        .args(args)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let mut stdin = child.stdin.take().unwrap();
+    let _ = stdin.write_all(input); // the child may stop reading before the end
+    drop(stdin);
+    child.wait_with_output().unwrap()
+}
+
+#[test]
+fn a_read_error_on_standard_input_is_an_error_not_a_quiet_stop() {
+    let o = gqodb_stdin_bytes(&[], b"use clock sequence\n\xff\nhelp\n");
+    let stderr = String::from_utf8_lossy(&o.stderr);
+    assert_eq!(o.status.code(), Some(1), "{stderr}");
+    assert!(
+        stderr.starts_with("error[E-FILE]: cannot read standard input: "),
+        "{stderr}"
+    );
+    assert!(
+        o.stdout.is_empty(),
+        "the line after the bad one must not run"
+    );
+}
+
+#[test]
+fn a_flood_of_bad_commands_gives_a_short_report() {
+    let src = "x;".repeat(60_000);
+    let started = Instant::now();
+    let (code, stderr, exceeded) = run_capped(&[src], 64 * 1024);
+    assert!(!exceeded, "more than 64 KiB of diagnostics");
+    assert_eq!(code, Some(2));
+    let stderr = String::from_utf8(stderr).unwrap();
+    assert_eq!(stderr.matches("error[E-SYNTAX]").count(), 20, "{stderr}");
+    assert!(stderr.ends_with("... and 59980 more\n"), "{stderr}");
+    assert!(
+        started.elapsed() < Duration::from_secs(5),
+        "{:?}",
+        started.elapsed()
+    );
+}
+
+#[test]
+fn a_one_mebibyte_script_of_bad_commands_gives_a_short_report_quickly() {
+    let dir = TempDir::new();
+    std::fs::write(dir.path("s.gq"), "x;".repeat(512 * 1024)).unwrap();
+    let started = Instant::now();
+    let (code, stderr, exceeded) = run_capped(
+        &["run".to_string(), dir.path("s.gq").display().to_string()],
+        64 * 1024,
+    );
+    assert!(!exceeded);
+    assert_eq!(code, Some(2));
+    assert!(
+        String::from_utf8(stderr)
+            .unwrap()
+            .contains("... and 524268 more")
+    );
+    assert!(
+        started.elapsed() < Duration::from_secs(10),
+        "{:?}",
+        started.elapsed()
+    );
+}
+
+#[test]
+fn quit_ends_a_pipe_whatever_it_looks_like_and_nothing_after_it_runs() {
+    for input in [
+        "quit;\nshow trades A in /no/such/dir\n",
+        "use clock sequence; quit\nshow trades A in /no/such/dir\n",
+        "exit # goodbye\nshow trades A in /no/such/dir\n",
+        "QUIT\nshow trades A in /no/such/dir\n",
+    ] {
+        let o = gqodb_stdin_bytes(&[], input.as_bytes());
+        assert_eq!(
+            o.status.code(),
+            Some(0),
+            "{input:?}: {}",
+            String::from_utf8_lossy(&o.stderr)
+        );
+        assert!(o.stderr.is_empty(), "{input:?}");
+        // the same text in a script file behaves the same
+        let dir = TempDir::new();
+        std::fs::write(dir.path("s.gq"), input).unwrap();
+        let o = gqodb()
+            .args(["run", &dir.path("s.gq").display().to_string()])
+            .output()
+            .unwrap();
+        assert_eq!(o.status.code(), Some(0), "run {input:?}");
+        assert!(o.stderr.is_empty(), "run {input:?}");
+    }
+}
+
+#[test]
+fn the_prompt_goes_to_standard_error_and_only_when_standard_input_is_a_terminal() {
+    let mut input = std::io::Cursor::new(b"help clocks\n".to_vec());
+    let (mut o, mut e) = (Vec::new(), Vec::new());
+    let code = repl(&mut input, true, false, &Flags::default(), &mut o, &mut e);
+    assert_eq!(code, 0);
+    let (out, err) = (String::from_utf8(o).unwrap(), String::from_utf8(e).unwrap());
+    assert!(
+        !out.contains("gqodb>"),
+        "the result stream stays clean: {out:?}"
+    );
+    assert!(out.contains("clocks"), "{out:?}");
+    assert!(err.contains("gqodb> "), "{err:?}");
+    let mut input = std::io::Cursor::new(b"help clocks\n".to_vec());
+    let (mut o, mut e) = (Vec::new(), Vec::new());
+    repl(&mut input, false, false, &Flags::default(), &mut o, &mut e);
+    assert!(!String::from_utf8_lossy(&o).contains("gqodb>"));
+    assert!(e.is_empty(), "no prompt for a pipe");
+}
+
+/// `gqodb` under a virtual-memory limit, so that unbounded reading ends in an error instead of eating the host.
+#[cfg(unix)]
+fn limited(args: &[&str], stdin: Stdio) -> std::process::Output {
+    Command::new("sh")
+        .args(["-c", "ulimit -v 1000000; exec \"$0\" \"$@\""])
+        .arg(env!("CARGO_BIN_EXE_gqodb"))
+        .args(args)
+        .stdin(stdin)
+        .output()
+        .unwrap()
+}
+
+#[cfg(unix)]
+#[test]
+fn reading_a_script_or_a_line_is_bounded() {
+    let stderr_of = |o: &std::process::Output| String::from_utf8_lossy(&o.stderr).into_owned();
+    let o = limited(&["run", "/dev/zero"], Stdio::null());
+    assert_eq!(o.status.code(), Some(2), "{}", stderr_of(&o));
+    assert!(
+        stderr_of(&o).contains("error[E-SYNTAX]: the input is longer than 1048576 bytes"),
+        "{}",
+        stderr_of(&o)
+    );
+    let o = limited(&[], Stdio::from(std::fs::File::open("/dev/zero").unwrap()));
+    assert_eq!(o.status.code(), Some(2), "{}", stderr_of(&o));
+    assert!(
+        stderr_of(&o).contains("error[E-SYNTAX]: the input is longer than 1048576 bytes"),
+        "{}",
+        stderr_of(&o)
+    );
+    let o = gqodb_stdin_bytes(&[], "A".repeat(2 * 1024 * 1024).as_bytes());
+    assert_eq!(o.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&o.stderr).contains("longer than 1048576 bytes"));
+}
+
+// Entries with a fitting name that are not plain files: reported, never dropped quietly, never opened when they could hang.
+
+fn skipped_of(report: &gqodb_cli::exec::Report) -> Vec<(String, String)> {
+    report
+        .skipped
+        .iter()
+        .map(|(n, r)| (n.clone(), r.to_string()))
+        .collect()
+}
+
+#[cfg(unix)]
+#[test]
+fn a_link_to_outside_the_directory_is_reported_as_skipped() {
+    let dir = TempDir::new();
+    let (inside, outside) = (dir.path("data"), dir.path("elsewhere"));
+    std::fs::create_dir(&inside).unwrap();
+    std::fs::create_dir(&outside).unwrap();
+    write_trades(&inside.join("a.gqodb.tick"), &[rows(2)], None, 5, 2);
+    write_trades(&outside.join("secret.gqodb.tick"), &[rows(2)], None, 5, 2);
+    std::os::unix::fs::symlink(
+        outside.join("secret.gqodb.tick"),
+        inside.join("b.gqodb.tick"),
+    )
+    .unwrap();
+    let q = format!("show trades EURUSD in {}", inside.display());
+    let (out, report) = run(&q);
+    assert_eq!(out.rows.len(), 2, "only a is read");
+    assert_eq!(
+        skipped_of(&report),
+        [(
+            "b.gqodb.tick".to_string(),
+            "symbolic link to outside the directory".to_string()
+        )]
+    );
+    let lines = FileExecutor
+        .explain(&plan_of(&format!("explain {q}")), &Options::default())
+        .unwrap();
+    assert!(
+        lines
+            .iter()
+            .any(|l| l == "b.gqodb.tick: skipped (symbolic link to outside the directory)"),
+        "{lines:?}"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn a_broken_link_is_reported_as_skipped() {
+    let dir = TempDir::new();
+    write_trades(&dir.path("a.gqodb.tick"), &[rows(2)], None, 5, 2);
+    std::os::unix::fs::symlink("/no/such/target.gqodb.tick", dir.path("b.gqodb.tick")).unwrap();
+    let (out, report) = run(&format!("show trades EURUSD in {}", dir.s()));
+    assert_eq!(out.rows.len(), 2);
+    assert_eq!(
+        skipped_of(&report),
+        [(
+            "b.gqodb.tick".to_string(),
+            "broken symbolic link".to_string()
+        )]
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn a_pipe_a_directory_and_a_link_to_them_are_reported_and_never_opened() {
+    let dir = TempDir::new();
+    write_trades(&dir.path("a.gqodb.tick"), &[rows(2)], None, 5, 2);
+    let fifo = dir.path("b.gqodb.tick");
+    let made = Command::new("mkfifo").arg(&fifo).status().unwrap();
+    assert!(made.success());
+    std::os::unix::fs::symlink(&fifo, dir.path("c.gqodb.tick")).unwrap();
+    std::fs::create_dir(dir.path("d.gqodb.tick")).unwrap();
+    let q = format!("show trades EURUSD in {}", dir.s());
+    let (out, report) = within(20, move || run(&q));
+    assert_eq!(out.rows.len(), 2);
+    let not_regular = "not a regular file".to_string();
+    assert_eq!(
+        skipped_of(&report),
+        [
+            ("b.gqodb.tick".to_string(), not_regular.clone()),
+            ("c.gqodb.tick".to_string(), not_regular.clone()),
+            ("d.gqodb.tick".to_string(), not_regular),
+        ]
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn a_pipe_named_as_the_path_is_neither_a_file_nor_a_directory() {
+    let dir = TempDir::new();
+    let fifo = dir.path("p");
+    assert!(
+        Command::new("mkfifo")
+            .arg(&fifo)
+            .status()
+            .unwrap()
+            .success()
+    );
+    let path = fifo.display().to_string();
+    match within(20, move || discover(&path)) {
+        Err(ExecError::Path(m)) => assert!(m.contains("is neither a file nor a directory"), "{m}"),
+        other => panic!("{other:?}"),
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn a_link_to_a_file_in_the_same_directory_is_not_read_twice() {
+    let dir = TempDir::new();
+    write_trades(&dir.path("b.gqodb.tick"), &[rows(2)], None, 5, 2);
+    // sorted before its target, and one more link to a file that has no fitting name itself
+    std::os::unix::fs::symlink(dir.path("b.gqodb.tick"), dir.path("a.gqodb.tick")).unwrap();
+    write_trades(&dir.path("plain.bin"), &[rows(2)], None, 5, 2);
+    std::os::unix::fs::symlink(dir.path("plain.bin"), dir.path("c.gqodb.tick")).unwrap();
+    std::os::unix::fs::symlink(dir.path("plain.bin"), dir.path("d.gqodb.tick")).unwrap();
+    let (out, report) = run(&format!("show trades EURUSD in {}", dir.s()));
+    assert_eq!(out.rows.len(), 4, "b once and plain.bin once");
+    assert_eq!(report.files_read, 2);
+    assert_eq!(
+        skipped_of(&report),
+        [
+            (
+                "a.gqodb.tick".to_string(),
+                "duplicate of b.gqodb.tick".to_string()
+            ),
+            (
+                "d.gqodb.tick".to_string(),
+                "duplicate of c.gqodb.tick".to_string()
+            ),
+        ]
+    );
+}
+
+fn hand_written(path: &Path, price_decimals: &str, received: arrow_schema::DataType) {
+    use arrow_array::{ArrayRef, Int8Array, Int64Array, LargeStringArray, RecordBatch};
+    use arrow_schema::{DataType, Field, Schema};
+    use std::sync::Arc;
+    let mut meta = std::collections::HashMap::new();
+    for (k, v) in [
+        ("gqodb.family", "tick"),
+        ("gqodb.subtype", "trade"),
+        ("gqodb.price_decimals", price_decimals),
+        ("gqodb.quantity_decimals", "2"),
+    ] {
+        meta.insert(k.to_string(), v.to_string());
+    }
+    let schema = Arc::new(Schema::new_with_metadata(
+        vec![
+            Field::new("symbol", DataType::LargeUtf8, false),
+            Field::new("available_utc_ns", DataType::Int64, false),
+            Field::new("received_utc_ns", received.clone(), true),
+            Field::new("sequence", DataType::Int64, false),
+            Field::new("price", DataType::Int64, false),
+        ],
+        meta,
+    ));
+    let received_column: ArrayRef = if received == DataType::Int8 {
+        Arc::new(Int8Array::from(vec![Some(5)]))
+    } else {
+        Arc::new(Int64Array::from(vec![Some(5_i64)]))
+    };
+    let columns: Vec<ArrayRef> = vec![
+        Arc::new(LargeStringArray::from(vec!["EURUSD"])),
+        Arc::new(Int64Array::from(vec![10_i64])),
+        received_column,
+        Arc::new(Int64Array::from(vec![1_i64])),
+        Arc::new(Int64Array::from(vec![123_i64])),
+    ];
+    let batch = RecordBatch::try_new(schema.clone(), columns).unwrap();
+    let mut writer = gqodb_store::Writer::create_with_codec(
+        path,
+        schema,
+        "available_utc_ns",
+        "symbol",
+        gqodb_blocks::real::Mode::Gqodb,
+    )
+    .unwrap();
+    writer.append(&batch).unwrap();
+    writer.finish().unwrap();
+}
+
+#[test]
+fn a_file_with_a_wrong_scale_or_a_wrong_clock_type_is_a_broken_file_not_a_wrong_answer() {
+    use arrow_schema::DataType;
+    let q = |dir: &TempDir| {
+        plan_of(&format!(
+            "show trades EURUSD in {} | columns sequence, price",
+            dir.s()
+        ))
+    };
+    for (price_decimals, received, what) in [
+        ("13", DataType::Int64, "scale"),
+        ("5", DataType::Int8, "clock type"),
+    ] {
+        let dir = TempDir::new();
+        hand_written(&dir.path("h.gqodb.tick"), price_decimals, received);
+        let mut sink = Collect::default();
+        let err = FileExecutor
+            .execute(&q(&dir), &Options::default(), &mut sink)
+            .expect_err(what);
+        assert!(
+            matches!(&err, ExecError::File { path, .. } if path == "h.gqodb.tick"),
+            "{what}: {err}"
+        );
+        let mut sink = Collect::default();
+        let report = FileExecutor
+            .execute(
+                &q(&dir),
+                &Options {
+                    skip_bad: true,
+                    ..Options::default()
+                },
+                &mut sink,
+            )
+            .unwrap();
+        assert_eq!((report.bad_files.len(), sink.rows.len()), (1, 0), "{what}");
+    }
+    // the same file with a good scale and clock type is read
+    let dir = TempDir::new();
+    hand_written(&dir.path("h.gqodb.tick"), "5", DataType::Int64);
+    let mut sink = Collect::default();
+    FileExecutor
+        .execute(&q(&dir), &Options::default(), &mut sink)
+        .unwrap();
+    assert_eq!(sink.texts("price"), ["0.00123"]);
 }

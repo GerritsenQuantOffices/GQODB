@@ -3,6 +3,7 @@ use crate::select::pick_rows;
 use crate::sink::Sink;
 use crate::value::{Cell, TimeFormat, cell, kind_of};
 use arrow_array::{Array, Int64Array, RecordBatch};
+use arrow_schema::DataType;
 use gqodb_lang::plan::Plan;
 use gqodb_lang::{ClockName, Stream};
 use std::fmt;
@@ -15,6 +16,14 @@ pub const HARD_MAX_BLOCKS: u64 = 100_000;
 pub const MAX_FILES: usize = 10_000;
 /// Rows `order` may hold in memory at once.
 pub const ORDER_BUFFER_ROWS: usize = 2_000_000;
+const ALL_CLOCKS: [ClockName; 4] = [
+    ClockName::Available,
+    ClockName::Received,
+    ClockName::Source,
+    ClockName::Sequence,
+];
+/// The largest decimal scale the codec accepts for prices and quantities.
+pub const MAX_SCALE: u8 = 12;
 
 #[derive(Clone, Debug)]
 pub struct Options {
@@ -71,12 +80,20 @@ impl fmt::Display for Truncation {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum SkipReason {
     WrongStream,
     NotNormalized,
     NoVenueLabel,
     VenueMismatch,
+    /// A symbolic link whose target lies outside the directory.
+    LinkOutside,
+    /// A symbolic link whose target does not exist.
+    BrokenLink,
+    /// A name that fits, but the entry is not a regular file (a directory, a pipe, a device) or the link leads to one.
+    NotRegular,
+    /// A symbolic link to a file that is read under its own name; the name of that file.
+    DuplicateOf(String),
 }
 
 impl fmt::Display for SkipReason {
@@ -86,6 +103,10 @@ impl fmt::Display for SkipReason {
             SkipReason::NotNormalized => "not a normalized tick or book file",
             SkipReason::NoVenueLabel => "no venue label",
             SkipReason::VenueMismatch => "other venue",
+            SkipReason::LinkOutside => "symbolic link to outside the directory",
+            SkipReason::BrokenLink => "broken symbolic link",
+            SkipReason::NotRegular => "not a regular file",
+            SkipReason::DuplicateOf(name) => return write!(f, "duplicate of {name}"),
         })
     }
 }
@@ -98,11 +119,14 @@ pub struct Report {
     /// Files that could not be read completely, with `--skip-bad`.
     pub bad_files: Vec<(String, String)>,
     pub blocks_read: u64,
+    /// Blocks of the files that were read; files left unopened (after a limit or `take`) are not in it.
     pub blocks_total: u64,
     pub bytes_read: u64,
     pub rows_scanned: u64,
     pub rows_out: u64,
     pub null_clock_excluded: u64,
+    /// Rows that `order` put last because they have no value on the order clock.
+    pub null_order_last: u64,
     pub truncated: Option<Truncation>,
 }
 
@@ -173,46 +197,106 @@ fn name_of(path: &Path) -> String {
     )
 }
 
+/// The files to read and the entries with a fitting name that are left out, with the reason.
+#[derive(Debug, Default)]
+pub struct Discovered {
+    pub files: Vec<PathBuf>,
+    pub skipped: Vec<(String, SkipReason)>,
+}
+
 /// A file, or the direct children of a directory with the extension `.gqodb.tick` or `.gqodb.ob`, sorted by name.
-/// A symbolic link is followed only when it stays inside the directory.
-pub fn discover(path: &str) -> Result<Vec<PathBuf>, ExecError> {
+/// An entry with a fitting name that is not read is reported, not dropped: a symbolic link that leads out of the
+/// directory or nowhere, an entry that is not a regular file (a directory, a pipe, a device), and a symbolic link to
+/// a file that is read already (it is read once, under the name of the file itself, or else of the first link).
+pub fn scan(path: &str) -> Result<Discovered, ExecError> {
     let root = Path::new(path);
     let meta = std::fs::metadata(root)
         .map_err(|e| ExecError::Path(format!("cannot read `{path}`: {e}")))?;
     if meta.is_file() {
-        return Ok(vec![root.to_path_buf()]);
+        return Ok(Discovered {
+            files: vec![root.to_path_buf()],
+            skipped: Vec::new(),
+        });
+    }
+    if !meta.is_dir() {
+        return Err(ExecError::Path(format!(
+            "`{path}` is neither a file nor a directory"
+        )));
     }
     let canonical = std::fs::canonicalize(root)
         .map_err(|e| ExecError::Path(format!("cannot read `{path}`: {e}")))?;
-    let mut files = Vec::new();
     let entries = std::fs::read_dir(root)
         .map_err(|e| ExecError::Path(format!("cannot list `{path}`: {e}")))?;
+    let mut regular: Vec<(String, PathBuf)> = Vec::new();
+    let mut links: Vec<(String, PathBuf, PathBuf)> = Vec::new();
+    let mut skipped = Vec::new();
+    let mut matching = 0;
     for entry in entries {
         let entry = entry.map_err(|e| ExecError::Path(format!("cannot list `{path}`: {e}")))?;
         let file_name = entry.file_name().to_string_lossy().into_owned();
         if !(file_name.ends_with(".gqodb.tick") || file_name.ends_with(".gqodb.ob")) {
             continue;
         }
+        matching += 1;
+        if matching > MAX_FILES {
+            return Err(ExecError::Budget(format!(
+                "more than {MAX_FILES} files in `{path}`; point at a smaller directory"
+            )));
+        }
         let ty = entry
             .file_type()
             .map_err(|e| ExecError::Path(format!("cannot inspect `{file_name}`: {e}")))?;
-        let keep = if ty.is_symlink() {
-            std::fs::canonicalize(entry.path())
-                .is_ok_and(|t| t.starts_with(&canonical) && t.is_file())
+        // Nothing here opens the entry: a pipe or a device must never be able to block the run.
+        if ty.is_file() {
+            regular.push((file_name, entry.path()));
+        } else if ty.is_symlink() {
+            match std::fs::canonicalize(entry.path()) {
+                Err(_) => skipped.push((file_name, SkipReason::BrokenLink)),
+                Ok(target) if !target.starts_with(&canonical) => {
+                    skipped.push((file_name, SkipReason::LinkOutside));
+                }
+                Ok(target) if std::fs::metadata(&target).is_ok_and(|m| m.is_file()) => {
+                    links.push((file_name, entry.path(), target));
+                }
+                Ok(_) => skipped.push((file_name, SkipReason::NotRegular)),
+            }
         } else {
-            ty.is_file()
-        };
-        if keep {
-            files.push(entry.path());
-            if files.len() > MAX_FILES {
-                return Err(ExecError::Budget(format!(
-                    "more than {MAX_FILES} files in `{path}`; point at a smaller directory"
-                )));
+            skipped.push((file_name, SkipReason::NotRegular));
+        }
+    }
+    let mut files = regular;
+    if !links.is_empty() {
+        let mut seen: std::collections::HashMap<PathBuf, String> = files
+            .iter()
+            .map(|(name, p)| {
+                (
+                    std::fs::canonicalize(p).unwrap_or_else(|_| p.clone()),
+                    name.clone(),
+                )
+            })
+            .collect();
+        links.sort_by(|a, b| a.0.cmp(&b.0));
+        for (name, p, target) in links {
+            match seen.get(&target) {
+                Some(original) => skipped.push((name, SkipReason::DuplicateOf(original.clone()))),
+                None => {
+                    seen.insert(target, name.clone());
+                    files.push((name, p));
+                }
             }
         }
     }
-    files.sort_by_key(|p| name_of(p));
-    Ok(files)
+    files.sort_by(|a, b| a.0.cmp(&b.0));
+    skipped.sort_by(|a, b| a.0.cmp(&b.0));
+    Ok(Discovered {
+        files: files.into_iter().map(|(_, p)| p).collect(),
+        skipped,
+    })
+}
+
+/// The files `scan` would read.
+pub fn discover(path: &str) -> Result<Vec<PathBuf>, ExecError> {
+    Ok(scan(path)?.files)
 }
 
 struct Opened {
@@ -242,20 +326,89 @@ fn open_for(path: &Path, plan: &Plan) -> Result<Result<Opened, SkipReason>, Exec
             Some(_) => {}
         }
     }
+    // Files that did not pass through the codec's own writer are not checked by it: check what reading relies on.
     let scale = |key: &str| -> Result<u8, ExecError> {
-        meta.get(key)
+        let n: u8 = meta
+            .get(key)
             .and_then(|v| v.parse().ok())
-            .ok_or_else(|| bad(format!("missing or invalid `{key}`")))
+            .ok_or_else(|| bad(format!("missing or invalid `{key}`")))?;
+        if n > MAX_SCALE {
+            return Err(bad(format!(
+                "`{key}` is {n}, more than the largest scale {MAX_SCALE}"
+            )));
+        }
+        Ok(n)
     };
     let scales = (
         scale("gqodb.price_decimals")?,
         scale("gqodb.quantity_decimals")?,
     );
+    for clock in ALL_CLOCKS {
+        let column = clock.column();
+        if let Ok(field) = schema.field_with_name(column) {
+            if *field.data_type() != DataType::Int64 {
+                return Err(bad(format!("column `{column}` is not a 64-bit integer")));
+            }
+        }
+    }
+    let used = plan
+        .range
+        .map(|r| r.clock)
+        .into_iter()
+        .chain(plan.order.map(|o| o.clock));
+    for clock in used {
+        if schema.field_with_name(clock.column()).is_err() {
+            return Err(bad(format!("has no column `{}`", clock.column())));
+        }
+    }
     Ok(Ok(Opened {
         reader,
         schema,
         scales,
     }))
+}
+
+/// Where the columns of the answer are in a file, and how each is written.
+type Indexes = Vec<(usize, crate::value::Kind)>;
+
+/// The columns the answer has, and where they are in the file. Checked before anything is written, so that a file
+/// that cannot take part (a column is missing, or the columns differ from the first file) leaves no header behind.
+fn check_columns(
+    path: &Path,
+    plan: &Plan,
+    opened: &Opened,
+    first: Option<&Vec<String>>,
+) -> Result<(Vec<String>, Indexes), ExecError> {
+    let bad = |reason: String| ExecError::File {
+        path: name_of(path),
+        reason,
+    };
+    let columns = columns_of(plan, &opened.schema);
+    let mut indexes = Vec::new();
+    for name in &columns {
+        let i = opened
+            .schema
+            .index_of(name)
+            .map_err(|_| bad(format!("has no column `{name}`")))?;
+        indexes.push((i, kind_of(name)));
+    }
+    if let Some(first) = first {
+        if &columns != first {
+            return Err(bad(format!(
+                "columns differ from the first file ({})",
+                first.join(", ")
+            )));
+        }
+    }
+    Ok((columns, indexes))
+}
+
+/// Why a file could not be read, without the file name (the notice names the file itself).
+fn reason_of(e: &ExecError) -> String {
+    match e {
+        ExecError::File { reason, .. } => reason.clone(),
+        other => other.to_string(),
+    }
 }
 
 /// A block can be skipped by its time bounds only when the file indexes the chosen clock and that column has no empty values.
@@ -330,6 +483,8 @@ fn columns_of(plan: &Plan, schema: &arrow_schema::SchemaRef) -> Vec<String> {
 fn read_file(
     path: &Path,
     opened: Opened,
+    columns: Vec<String>,
+    indexes: Indexes,
     st: &mut State,
     sink: &mut dyn Sink,
 ) -> Result<(), ExecError> {
@@ -339,28 +494,10 @@ fn read_file(
         .as_ref()
         .is_some_and(|r| prunes(&opened, r.clock));
     let Opened {
-        mut reader,
-        schema,
-        scales,
+        mut reader, scales, ..
     } = opened;
     let file_label = name_of(path);
-    let columns = columns_of(plan, &schema);
-    begin(st, sink, columns.clone())?;
-    let header = st.header.clone().expect("begun");
-    if columns != header {
-        return Err(ExecError::File {
-            path: file_label,
-            reason: format!("columns differ from the first file ({})", header.join(", ")),
-        });
-    }
-    let mut indexes = Vec::new();
-    for name in &columns {
-        let i = schema.index_of(name).map_err(|_| ExecError::File {
-            path: file_label.clone(),
-            reason: format!("has no column `{name}`"),
-        })?;
-        indexes.push((i, kind_of(name)));
-    }
+    begin(st, sink, columns)?;
     let order_key = plan.order.map(|o| o.clock.column());
     st.report.files_read += 1;
     let blocks: Vec<_> = reader.blocks().to_vec();
@@ -462,15 +599,25 @@ fn drive(
         if st.stop {
             break;
         }
-        match open_for(path, plan) {
-            Ok(Ok(opened)) => read_file(path, opened, st, sink)?,
+        let prepared = match open_for(path, plan) {
+            Ok(Ok(opened)) => {
+                check_columns(path, plan, &opened, st.header.as_ref()).map(|c| Ok((opened, c)))
+            }
+            Ok(Err(reason)) => Ok(Err(reason)),
+            Err(e) => Err(e),
+        };
+        match prepared {
+            Ok(Ok((opened, (columns, indexes)))) => {
+                read_file(path, opened, columns, indexes, st, sink)?;
+            }
             Ok(Err(reason)) => st.report.skipped.push((name_of(path), reason)),
-            Err(e) if opts.skip_bad => st.report.bad_files.push((name_of(path), e.to_string())),
+            Err(e) if opts.skip_bad => st.report.bad_files.push((name_of(path), reason_of(&e))),
             Err(e) => return Err(e),
         }
     }
     if let Some(order) = plan.order {
         let mut rows = std::mem::take(&mut st.ordered);
+        st.report.null_order_last = rows.iter().filter(|r| r.0.is_none()).count() as u64;
         rows.sort_by(|a, b| match (a.0, b.0) {
             (Some(x), Some(y)) => {
                 if order.desc {
@@ -511,18 +658,21 @@ impl Executor for FileExecutor {
         opts: &Options,
         sink: &mut dyn Sink,
     ) -> Result<Report, ExecError> {
-        let files = discover(&plan.path)?;
+        let found = scan(&plan.path)?;
         let mut st = State {
             plan,
             opts,
-            report: Report::default(),
+            report: Report {
+                skipped: found.skipped,
+                ..Report::default()
+            },
             header: None,
             skipped: 0,
             emitted: 0,
             stop: false,
             ordered: Vec::new(),
         };
-        match drive(plan, opts, &files, &mut st, sink) {
+        match drive(plan, opts, &found.files, &mut st, sink) {
             Ok(()) => Ok(st.report),
             Err(ExecError::Closed(_)) => Err(ExecError::Closed(st.report.bad_files)),
             Err(e) => Err(e),
@@ -530,7 +680,7 @@ impl Executor for FileExecutor {
     }
 
     fn explain(&self, plan: &Plan, opts: &Options) -> Result<Vec<String>, ExecError> {
-        let files = discover(&plan.path)?;
+        let found = scan(&plan.path)?;
         let mut lines = vec![format!(
             "plan: {} {}{}{} in {} (budgets: {} output rows, {} scanned rows, {} blocks)",
             plan.stream.name(),
@@ -547,9 +697,37 @@ impl Executor for FileExecutor {
             opts.max_scan_rows,
             opts.max_blocks
         )];
-        for path in &files {
-            match open_for(path, plan)? {
-                Err(reason) => lines.push(format!("{}: skipped ({reason})", name_of(path))),
+        // One line per entry, in name order: the files and the entries that are left out.
+        let mut entries: Vec<(String, Option<&PathBuf>, Option<&SkipReason>)> = found
+            .files
+            .iter()
+            .map(|p| (name_of(p), Some(p), None))
+            .chain(
+                found
+                    .skipped
+                    .iter()
+                    .map(|(n, r)| (n.clone(), None, Some(r))),
+            )
+            .collect();
+        entries.sort_by(|a, b| a.0.cmp(&b.0));
+        for (name, path, left_out) in entries {
+            if let Some(reason) = left_out {
+                lines.push(format!("{name}: skipped ({reason})"));
+                continue;
+            }
+            let path = path.expect("a file or a reason");
+            let opened = match open_for(path, plan) {
+                Err(e) if opts.skip_bad => {
+                    lines.push(format!(
+                        "{name}: could not be read ({}); skipped with --skip-bad",
+                        reason_of(&e)
+                    ));
+                    continue;
+                }
+                other => other?,
+            };
+            match opened {
+                Err(reason) => lines.push(format!("{name}: skipped ({reason})")),
                 Ok(opened) => {
                     let blocks = opened.reader.blocks();
                     let with_symbol: Vec<_> = blocks
@@ -570,26 +748,23 @@ impl Executor for FileExecutor {
                             ),
                         ),
                     };
-                    let candidates = if use_index {
+                    let candidates: Vec<_> = if use_index {
                         let r = plan.range.as_ref().expect("checked");
                         with_symbol
-                            .iter()
+                            .into_iter()
                             .filter(|b| {
                                 !(r.end.is_some_and(|e| b.min_time >= e)
                                     || r.start.is_some_and(|s| b.max_time < s))
                             })
-                            .count()
+                            .collect()
                     } else {
-                        with_symbol.len()
+                        with_symbol
                     };
-                    let bytes: u64 = with_symbol.iter().map(|b| b.length).sum();
+                    let bytes: u64 = candidates.iter().map(|b| b.length).sum();
                     lines.push(format!(
-                        "{}: {} of {} blocks to read ({}); at most {} bytes",
-                        name_of(path),
-                        candidates,
+                        "{name}: {} of {} blocks to read ({why}); at most {bytes} bytes",
+                        candidates.len(),
                         blocks.len(),
-                        why,
-                        bytes
                     ));
                 }
             }

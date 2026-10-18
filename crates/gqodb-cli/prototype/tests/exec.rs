@@ -365,11 +365,21 @@ fn a_symlink_out_of_the_directory_is_not_followed() {
     )
     .unwrap();
     std::os::unix::fs::symlink(inside.join("a.gqodb.tick"), inside.join("c.gqodb.tick")).unwrap();
-    let (out, _) = run(&format!("show trades EURUSD in {}", inside.display()));
+    let (out, report) = run(&format!("show trades EURUSD in {}", inside.display()));
     assert_eq!(
         out.ints("sequence"),
-        [1, 1],
-        "a and the link to a; not the link out"
+        [1],
+        "a once; the link out is not followed and the link to a is not a second copy"
+    );
+    assert_eq!(
+        report.skipped,
+        vec![
+            ("b.gqodb.tick".to_string(), SkipReason::LinkOutside),
+            (
+                "c.gqodb.tick".to_string(),
+                SkipReason::DuplicateOf("a.gqodb.tick".to_string())
+            ),
+        ]
     );
 }
 

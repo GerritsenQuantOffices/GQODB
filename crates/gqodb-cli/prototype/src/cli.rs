@@ -3,8 +3,8 @@
 use crate::exec::{ExecError, Executor, FileExecutor, Options, Report};
 use crate::sink::{Format, make_sink};
 use crate::value::TimeFormat;
-use gqodb_lang::{Command, Session, parse, plan};
-use std::io::{BufRead, BufWriter, Write};
+use gqodb_lang::{Command, Session, parse, plan, render_all};
+use std::io::{BufRead, BufWriter, Read, Write};
 
 /// Longest accepted command text.
 pub const MAX_COMMAND_BYTES: usize = 1 << 20;
@@ -150,7 +150,7 @@ fn footer(err: &mut dyn Write, plan: &gqodb_lang::Plan, r: &Report, opts: &Optio
     );
     let _ = writeln!(
         err,
-        "-- files: {} read, {} skipped · blocks: {} of {} read · bytes: {} · rows: {} scanned, {} out",
+        "-- files: {} read, {} skipped · blocks: {} read of {} in the files read · bytes: {} · rows: {} scanned, {} out",
         r.files_read,
         r.skipped.len(),
         r.blocks_read,
@@ -204,9 +204,7 @@ fn run_show(
     let p = match plan(cmd, session) {
         Ok(p) => p,
         Err(diags) => {
-            for d in diags {
-                let _ = write!(err, "{}", d.render(src));
-            }
+            let _ = write!(err, "{}", render_all(&diags, src));
             return (2, false);
         }
     };
@@ -229,9 +227,12 @@ fn run_show(
             }
         };
     }
-    let format = flags
-        .format
-        .unwrap_or(if tty { Format::Table } else { Format::Csv });
+    // A file is not a terminal: with `--out` the default is CSV even when standard output is one.
+    let format = flags.format.unwrap_or(if tty && flags.out.is_none() {
+        Format::Table
+    } else {
+        Format::Csv
+    });
     let result = match &flags.out {
         Some(path) => match std::fs::OpenOptions::new()
             .write(true)
@@ -244,7 +245,13 @@ fn run_show(
                     let mut sink = make_sink(format, &mut w);
                     exec.execute(&p, &flags.opts, &mut *sink)
                 };
-                if let Err(e) = w.flush() {
+                let flushed = w.flush();
+                drop(w);
+                if r.is_err() {
+                    // The file was created by this run (`create_new`): a run that failed leaves nothing behind.
+                    let _ = std::fs::remove_file(path);
+                } else if let Err(e) = flushed {
+                    let _ = std::fs::remove_file(path);
                     let _ = writeln!(err, "error[E-FILE]: cannot write `{path}`: {e}");
                     return (1, false);
                 }
@@ -297,10 +304,29 @@ pub fn run_text(
     out: &mut dyn Write,
     err: &mut dyn Write,
 ) -> u8 {
-    run_commands(src, session, flags, tty, out, err, &mut false)
+    run_commands(src, session, flags, tty, out, err).0
 }
 
-/// Like `run_text`; sets `closed_out` when the reader of `out` went away, which ends the whole run.
+/// Why `run_commands` stopped early, when it did not run to the end of the text.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Stop {
+    /// It ran every command, or stopped at one that failed.
+    No,
+    /// The reader of `out` went away: that ends the whole run.
+    Closed,
+    /// A `quit` or `exit` command: that ends the whole run, also inside a REPL or a pipe.
+    Quit,
+}
+
+fn too_long(err: &mut dyn Write) -> u8 {
+    let _ = writeln!(
+        err,
+        "error[E-SYNTAX]: the input is longer than {MAX_COMMAND_BYTES} bytes"
+    );
+    2
+}
+
+/// Like `run_text`; also says whether the run has to end altogether.
 fn run_commands(
     src: &str,
     session: &mut Session,
@@ -308,22 +334,15 @@ fn run_commands(
     tty: bool,
     out: &mut dyn Write,
     err: &mut dyn Write,
-    closed_out: &mut bool,
-) -> u8 {
+) -> (u8, Stop) {
     if src.len() > MAX_COMMAND_BYTES {
-        let _ = writeln!(
-            err,
-            "error[E-SYNTAX]: the input is longer than {MAX_COMMAND_BYTES} bytes"
-        );
-        return 2;
+        return (too_long(err), Stop::No);
     }
     let script = match parse(src) {
         Ok(s) => s,
         Err(diags) => {
-            for d in diags {
-                let _ = write!(err, "{}", d.render(src));
-            }
-            return 2;
+            let _ = write!(err, "{}", render_all(&diags, src));
+            return (2, Stop::No);
         }
     };
     for cmd in &script.commands {
@@ -345,24 +364,50 @@ fn run_commands(
                             "error[E-SYNTAX]: no help for `{name}`; topics: {}",
                             crate::help::TOPICS.join(", ")
                         );
-                        return 2;
+                        return (2, Stop::No);
                     }
                 },
             },
-            Command::Quit => return 0,
+            Command::Quit => return (0, Stop::Quit),
             Command::Show(_) | Command::Explain(_) => {
                 let (code, closed) = run_show(cmd, src, session, flags, tty, out, err);
-                if code != 0 || closed {
-                    *closed_out = closed;
-                    return code;
+                if closed {
+                    return (code, Stop::Closed);
+                }
+                if code != 0 {
+                    return (code, Stop::No);
                 }
             }
         }
     }
-    0
+    (0, Stop::No)
 }
 
-fn repl(
+/// What one bounded read of a line from the input gave.
+enum Line {
+    End,
+    Text(String),
+    TooLong,
+    Failed(String),
+}
+
+/// Reads one line, at most `MAX_COMMAND_BYTES + 1` bytes of it: a longer line is never taken into memory.
+fn read_line_bounded(input: &mut dyn BufRead) -> Line {
+    let mut bytes = Vec::new();
+    match Read::take(&mut *input, MAX_COMMAND_BYTES as u64 + 1).read_until(b'\n', &mut bytes) {
+        Ok(0) => Line::End,
+        Ok(_) if bytes.len() > MAX_COMMAND_BYTES => Line::TooLong,
+        Ok(_) => match String::from_utf8(bytes) {
+            Ok(text) => Line::Text(text),
+            Err(_) => Line::Failed("stream did not contain valid UTF-8".to_string()),
+        },
+        Err(e) => Line::Failed(e.to_string()),
+    }
+}
+
+/// Reads commands line by line. The prompt goes to standard error and only when the input is a terminal, so the
+/// result stream holds nothing but results.
+pub fn repl(
     input: &mut dyn BufRead,
     tty_in: bool,
     tty_out: bool,
@@ -373,31 +418,60 @@ fn repl(
     let mut session = Session::default();
     loop {
         if tty_in {
-            let _ = write!(out, "gqodb> ");
-            let _ = out.flush();
+            let _ = write!(err, "gqodb> ");
+            let _ = err.flush();
         }
-        let mut line = String::new();
-        match input.read_line(&mut line) {
-            Ok(0) | Err(_) => break,
-            Ok(_) => {}
-        }
-        let text = line.trim();
-        if text.is_empty() {
+        let line = match read_line_bounded(input) {
+            Line::End => break,
+            Line::Text(line) => line,
+            Line::TooLong => return too_long(err),
+            Line::Failed(why) => {
+                let _ = writeln!(err, "error[E-FILE]: cannot read standard input: {why}");
+                return 1;
+            }
+        };
+        if line.trim().is_empty() {
             continue;
         }
-        if text.eq_ignore_ascii_case("quit") || text.eq_ignore_ascii_case("exit") {
-            break;
-        }
-        let mut closed = false;
-        let code = run_commands(&line, &mut session, flags, tty_out, out, err, &mut closed);
-        if closed {
-            return code;
-        }
-        if code != 0 && !tty_in {
-            return code;
+        let (code, stop) = run_commands(&line, &mut session, flags, tty_out, out, err);
+        match stop {
+            Stop::Quit | Stop::Closed => return code,
+            Stop::No if code != 0 && !tty_in => return code,
+            Stop::No => {}
         }
     }
     0
+}
+
+/// Runs the commands in a file. The file is read up to the size limit and no further.
+fn run_file(
+    path: &str,
+    session: &mut Session,
+    flags: &Flags,
+    tty: bool,
+    out: &mut dyn Write,
+    err: &mut dyn Write,
+) -> u8 {
+    let mut bytes = Vec::new();
+    let read = std::fs::File::open(path)
+        .and_then(|f| f.take(MAX_COMMAND_BYTES as u64 + 1).read_to_end(&mut bytes));
+    if let Err(e) = read {
+        let _ = writeln!(err, "error[E-FILE]: cannot read `{path}`: {e}");
+        return 1;
+    }
+    if bytes.len() > MAX_COMMAND_BYTES {
+        return too_long(err);
+    }
+    match String::from_utf8(bytes) {
+        Ok(text) => run_text(&text, session, flags, tty, out, err),
+        Err(_) => {
+            let _ = writeln!(
+                err,
+                "error[E-FILE]: cannot read `{path}`: stream did not contain valid UTF-8"
+            );
+            1
+        }
+    }
 }
 
 pub fn main_with(args: Vec<String>, stdin_is_tty: bool) -> u8 {
@@ -426,13 +500,9 @@ pub fn main_with(args: Vec<String>, stdin_is_tty: bool) -> u8 {
                 &mut err,
             )
         }
-        Some("run") if words.len() == 2 => match std::fs::read_to_string(&words[1]) {
-            Ok(text) => run_text(&text, &mut session, &flags, tty_out, &mut out, &mut err),
-            Err(e) => {
-                let _ = writeln!(err, "error[E-FILE]: cannot read `{}`: {e}", words[1]);
-                1
-            }
-        },
+        Some("run") if words.len() == 2 => {
+            run_file(&words[1], &mut session, &flags, tty_out, &mut out, &mut err)
+        }
         Some("-h") if words.len() == 1 => {
             let _ = write!(out, "{HELP}");
             0

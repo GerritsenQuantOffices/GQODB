@@ -13,7 +13,7 @@ pub mod span;
 pub mod time;
 
 pub use ast::{ClockName, Command, Script, Show, Step, Stream};
-pub use diag::{Code, Diagnostic};
+pub use diag::{Code, Diagnostic, render_all};
 pub use parser::parse;
 pub use plan::{Plan, Session, plan};
 pub use print::to_canonical;

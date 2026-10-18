@@ -20,12 +20,8 @@ fn gqodb_stdin(args: &[&str], input: &str) -> Output {
         .stderr(Stdio::piped())
         .spawn()
         .unwrap();
-    child
-        .stdin
-        .take()
-        .unwrap()
-        .write_all(input.as_bytes())
-        .unwrap();
+    // The child may refuse an over-long input and exit before it has read all of it: a broken pipe here is fine.
+    let _ = child.stdin.take().unwrap().write_all(input.as_bytes());
     child.wait_with_output().unwrap()
 }
 

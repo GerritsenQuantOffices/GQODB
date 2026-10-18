@@ -212,7 +212,7 @@ target/release/gqodb --format table "show trades SYNTH 1..3 on sequence in $d | 
 # 1         1.00   2
 # 2         1.00   2
 # -- clock sequence, range [1, 3)
-# -- files: 1 read, 1 skipped · blocks: 1 of 1 read · bytes: 2455 · rows: 3 scanned, 2 out
+# -- files: 1 read, 1 skipped · blocks: 1 read of 1 in the files read · bytes: 2455 · rows: 3 scanned, 2 out
 # -- skipped demo.gqodb.ob: other stream
 
 target/release/gqodb --format table "show trades SYNTH 1970-01-01.. on source in $d | columns sequence, source_utc_ns"
@@ -221,7 +221,7 @@ target/release/gqodb --format table "show trades SYNTH 1970-01-01.. on source in
 # 1         1970-01-01T00:00:00.000000008Z
 # 3         1970-01-01T00:00:00.000000010Z
 # -- clock source, range [1970-01-01T00:00:00.000000000Z, )
-# -- files: 1 read, 1 skipped · blocks: 1 of 1 read · bytes: 2455 · rows: 3 scanned, 2 out
+# -- files: 1 read, 1 skipped · blocks: 1 read of 1 in the files read · bytes: 2455 · rows: 3 scanned, 2 out
 # -- skipped demo.gqodb.ob: other stream
 # -- excluded: 1 rows without a source value
 ```

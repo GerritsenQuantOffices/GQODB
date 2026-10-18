@@ -36,7 +36,7 @@ sequence,price,quantity
 1,1.00,2
 2,1.00,2
 -- clock sequence, range [1, 3)
--- files: 1 read, 1 skipped · blocks: 1 of 1 read · bytes: 2455 · rows: 3 scanned, 2 out
+-- files: 1 read, 1 skipped · blocks: 1 read of 1 in the files read · bytes: 2455 · rows: 3 scanned, 2 out
 -- skipped demo.gqodb.ob: other stream
 ```
 
@@ -171,7 +171,7 @@ sequence
 2
 3
 -- clock sequence, range [2, )
--- files: 1 read, 1 skipped · blocks: 1 of 1 read · bytes: 2455 · rows: 3 scanned, 2 out
+-- files: 1 read, 1 skipped · blocks: 1 read of 1 in the files read · bytes: 2455 · rows: 3 scanned, 2 out
 -- skipped demo.gqodb.ob: other stream
 ```
 
@@ -241,7 +241,7 @@ sequence,source_utc_ns
 1,1970-01-01T00:00:00.000000008Z
 3,1970-01-01T00:00:00.000000010Z
 -- clock source, range [1970-01-01T00:00:00.000000000Z, )
--- files: 1 read, 1 skipped · blocks: 1 of 1 read · bytes: 2455 · rows: 3 scanned, 2 out
+-- files: 1 read, 1 skipped · blocks: 1 read of 1 in the files read · bytes: 2455 · rows: 3 scanned, 2 out
 -- skipped demo.gqodb.ob: other stream
 -- excluded: 1 rows without a source value
 ```
@@ -326,7 +326,7 @@ sequence,level,action
 2,1,1
 1,1,0
 -- clock sequence, range [1, 4)
--- files: 1 read, 1 skipped · blocks: 1 of 1 read · bytes: 2627 · rows: 3 scanned, 3 out
+-- files: 1 read, 1 skipped · blocks: 1 read of 1 in the files read · bytes: 2627 · rows: 3 scanned, 3 out
 -- skipped demo.gqodb.tick: other stream
 ```
 
@@ -354,7 +354,7 @@ sequence
 1
 2
 -- no time range
--- files: 1 read, 1 skipped · blocks: 1 of 1 read · bytes: 2455 · rows: 3 scanned, 2 out
+-- files: 1 read, 1 skipped · blocks: 1 read of 1 in the files read · bytes: 2455 · rows: 3 scanned, 2 out
 -- skipped demo.gqodb.ob: other stream
 -- truncated: output rows (limits: 2 output rows, 1048576 scanned rows, 4096 blocks)
 ```
@@ -434,7 +434,7 @@ untouched. The footer and every error go to standard error.
 **The footer.** After a `show` that finished, standard error holds:
 
 - `-- clock <clock>, range [<begin>, <end>)`, or `-- no time range`;
-- `-- files: <n> read, <n> skipped · blocks: <read> of <total> read · bytes: <n> · rows: <n> scanned, <n> out`
+- `-- files: <n> read, <n> skipped · blocks: <read> read of <total> in the files read · bytes: <n> · rows: <n> scanned, <n> out`
   (`bytes` is the encoded size of the blocks that were read);
 - one `-- skipped <file>: <reason>` per skipped file (other stream, not a normalized tick or book file,
   no venue label, other venue);
@@ -542,7 +542,7 @@ under the key `gqodb.venue`, set by whoever wrote the file.
 $ gqodb "show trades SYNTH bybit in ./demo | columns sequence"
 sequence
 -- no time range
--- files: 0 read, 2 skipped · blocks: 0 of 0 read · bytes: 0 · rows: 0 scanned, 0 out
+-- files: 0 read, 2 skipped · blocks: 0 read of 0 in the files read · bytes: 0 · rows: 0 scanned, 0 out
 -- skipped demo.gqodb.ob: other stream
 -- skipped demo.gqodb.tick: no venue label
 ```
