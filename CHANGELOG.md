@@ -7,6 +7,25 @@ convention: a change that is not backwards-compatible bumps the minor version, a
 
 ## [Unreleased]
 
+### Added
+
+- Two crates: `gqodb-lang` (the command language: lexer, parser, diagnostics, planner; no I/O, no
+  dependencies, `#![forbid(unsafe_code)]`) and `gqodb-cli` (the executor over native tick and
+  order-book files, the output formats and the command-line front door). The workspace now has six
+  crates.
+- The `gqodb` binary, installed by `install.sh` with `gqodb-codec` and `ob_store`. It runs one command,
+  a script (`gqodb run <file>`) or an interactive loop; budgets for output rows, scanned rows and blocks;
+  table, CSV, JSON and NDJSON output; exit codes 0 to 3; `--strict`, `--skip-bad` and `--out`
+  (a new file, never overwritten). It reads files only.
+- The command language: `show`, `explain`, `use`, `help` and `quit`, with the streams `trades`, `quotes`
+  and `book`, an explicit clock for every range (`available`, `received`, `source`, `sequence`; no default)
+  and the steps `take`, `skip`, `columns` and `order`. Ten error codes with a place in the source; the
+  words `as`, `provenance`, `quality`, `uncertainty`, `join`, `asof`, `import`, `capture` and `ledger`
+  are reserved for the GQODB engine and give `E-ENGINE`. Reference: `docs/LANGUAGE.md`, which lists the
+  flaws that are known. A 0.x preview with no stability promise (see `docs/API_STABILITY.md`).
+- Fuzz target `lang_parse` (the language parser and printer) in the libFuzzer harness; see
+  `docs/FUZZING.md`.
+
 ## [0.1.0] - 2026-10-18
 
 First public preview, source only. Released on 2026-10-18 as a GitHub pre-release (tag `v0.1.0`,

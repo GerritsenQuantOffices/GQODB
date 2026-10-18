@@ -88,6 +88,8 @@ results. B06 and B12 have no receipts and are marked as historical.
 | `gqodb-blocks` — lossless codec kernels, tick and book profiles | Recovery of a live writer, quality checks and features |
 | `gqodb-store` — indexed `.gqodb.ob` segments with range reads and prefix recovery | Causal as-of queries, ops and health assessment |
 | `gqodb-codec` — the native format facade and file inspection | Venue connectors and the same-host shared-memory bus |
+| `gqodb-lang` — the command language: parser, diagnostics and planner | Running `as of`, provenance and joins (the language reserves the words) |
+| `gqodb-cli` — the `gqodb` command, which runs the language over native files | |
 | Format notes, benchmark protocols, result files, receipts and a verifier | The GCO quant suite: backtest, paper execution, risk, models, experiments |
 
 ## Where it stands today
@@ -191,6 +193,50 @@ the Windows CI entry fails, see "Still not measured". The default build is pure 
 trade samples were zstd-compressed Parquet; to read inputs like that, build
 `gqodb-blocks` with `--features zstd-input`, which adds the native zstd library from
 crates.io. It only decodes inputs and is never one of the measured codecs.
+
+## Query the files
+
+The `gqodb` command asks `.gqodb.tick` and `.gqodb.ob` files what they hold, with a small command
+language (`gqodb-lang`, run by `gqodb-cli`). The two commands below were run with binaries built from this
+branch on 2026-10-18 (Linux x86_64, Rust 1.96.0) on the demo files of `gqodb-codec`, three synthetic rows
+stamped a few nanoseconds after 1970-01-01, and printed what is shown:
+
+```sh
+d=$(mktemp -d)
+target/release/gqodb-codec demo tick-segment "$d/demo.gqodb.tick"
+target/release/gqodb-codec demo book-segment "$d/demo.gqodb.ob"
+
+target/release/gqodb --format table "show trades SYNTH 1..3 on sequence in $d | columns sequence, price, quantity"
+# sequence  price  quantity
+# --------  -----  --------
+# 1         1.00   2
+# 2         1.00   2
+# -- clock sequence, range [1, 3)
+# -- files: 1 read, 1 skipped · blocks: 1 of 1 read · bytes: 2455 · rows: 3 scanned, 2 out
+# -- skipped demo.gqodb.ob: other stream
+
+target/release/gqodb --format table "show trades SYNTH 1970-01-01.. on source in $d | columns sequence, source_utc_ns"
+# sequence  source_utc_ns
+# --------  ------------------------------
+# 1         1970-01-01T00:00:00.000000008Z
+# 3         1970-01-01T00:00:00.000000010Z
+# -- clock source, range [1970-01-01T00:00:00.000000000Z, )
+# -- files: 1 read, 1 skipped · blocks: 1 of 1 read · bytes: 2455 · rows: 3 scanned, 2 out
+# -- skipped demo.gqodb.ob: other stream
+# -- excluded: 1 rows without a source value
+```
+
+A range always names its clock; there is no default. A row that is empty on the chosen clock (the
+second row has no source time) is outside every range on it, and the footer counts it. Prices are written
+exactly from their integer and scale, results are cut at 1,000 rows unless you ask for more, and every
+cut is reported. The full reference, with the grammar, budgets, error codes and exit codes, is
+[docs/LANGUAGE.md](docs/LANGUAGE.md); that page also lists the flaws that are known today.
+
+The language is a 0.x preview with no stability promise: the grammar, the error texts and the output
+may change in any 0.x release (see [API stability](docs/API_STABILITY.md)). `as of`, provenance, quality
+and joins are words the language reserves for the GQODB engine, which is not in this repository; the
+open executor refuses them with the error `E-ENGINE`. The command only reads files: it writes none
+except a new result file when you pass `--out`.
 
 ## Formats
 
@@ -472,7 +518,7 @@ shows how the measured code maps to it. The run-2 receipt names `c07fbde`, which
 
 ## Crates
 
-**4 packages, and what each one cannot do.** Source and tests stay under each crate's
+**6 packages, and what each one cannot do.** Source and tests stay under each crate's
 `prototype/` directory.
 
 | Crate | What exists | Main limit |
@@ -481,6 +527,8 @@ shows how the measured code maps to it. The run-2 receipt names `c07fbde`, which
 | [gqodb-blocks](crates/gqodb-blocks/README.md) | Lossless codec kernels with adaptive column predictors, schema and null preservation, Parquet counter-tests | Codec kernels are not a database |
 | [gqodb-store](crates/gqodb-store/README.md) | Indexed `.gqodb.ob` segments, block index, range read, committed-prefix recovery | Not a catalog or retention product |
 | [gqodb-codec](crates/gqodb-codec/README.md) | Native facade with format and schema inspection; selects the tick or book profile from the header | Venue meaning stays with the caller |
+| [gqodb-lang](crates/gqodb-lang/README.md) | The command language: lexer, parser, diagnostics and planner; no I/O, no dependencies | Runs nothing by itself; `as of`, provenance and joins are reserved words |
+| [gqodb-cli](crates/gqodb-cli/README.md) | The `gqodb` binary: reads tick and book files, writes table, CSV or JSON, with budgets and exit codes | Reads files only; a 0.x preview with no output stability |
 
 ## Versioning and status
 

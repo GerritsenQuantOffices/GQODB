@@ -6,7 +6,7 @@ which parts are meant to be used, which are experiments, and what is pinned by t
 today. It does not describe anything that is not in the repository.
 
 Versioning: the crates follow Cargo's 0.x convention. A change that is not
-backwards-compatible bumps the minor version (0.1 to 0.2). The four crates are released
+backwards-compatible bumps the minor version (0.1 to 0.2). The crates are released
 together and share one version number. The declared minimum Rust version is 1.85; it is
 built and tested on Linux with the committed `Cargo.lock` (see `docs/RELEASING.md`),
 and it may be raised in a minor release.
@@ -37,8 +37,14 @@ subject to change.
 - **The `prototype/` directories.** Each crate keeps its source and tests under
   `prototype/` for historical reasons. The directory name is not a statement about the
   maturity of one crate over another, and the layout may change.
-- **Command-line interfaces.** `gqodb-codec` and `ob_store` subcommands, arguments and
-  the JSON printed by `inspect` can change. Do not parse them in production scripts.
+- **Command-line interfaces.** `gqodb-codec`, `ob_store` and `gqodb` subcommands, arguments and
+  the JSON printed by `inspect` can change. Do not parse them in production scripts. For `gqodb`
+  the same holds for the command language itself (grammar, keywords, reserved words), its error
+  codes and error texts, the footer on standard error, the exit codes and the output formats:
+  none of them has a stability promise in this 0.x preview. The language is described in
+  [LANGUAGE.md](LANGUAGE.md); what the tests pin today is the printed error text of its golden
+  cases, that a parsed command prints to canonical text which parses and prints identically again, and the
+  exact decimal output.
 - **Demo helpers** such as `gqodb_codec::fixture` and the `demo` subcommand: synthetic
   fixtures, not an ingestion format.
 - **Limits.** The size bounds in `gqodb-codec` (for example `MAX_BLOCK_BYTES`) and in
