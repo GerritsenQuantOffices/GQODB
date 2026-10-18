@@ -5,7 +5,7 @@ no format-stability promise and no signed artifact, and it is not published to c
 The GQODB engine (raw journal, ledger and receipts, recovery, quality, features, causal
 query, ops and connectors) is not part of this repository and is not licensed by it.
 
-Licence: Apache-2.0. Date: to be filled in by the owner when the tag is created.
+Licence: Apache-2.0. Date: 2026-10-18 (tag `v0.1.0`, unsigned, GitHub pre-release).
 
 ## What is in
 

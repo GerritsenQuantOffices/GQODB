@@ -90,7 +90,7 @@ results. B06 and B12 have no receipts and are marked as historical.
 
 <div align="center">
 
-| 4 | 76 | 28 | 0 |
+| 4 | 76 | 28 | 1 |
 |:---:|:---:|:---:|:---:|
 | crates | tests passed, 0 failed, 0 ignored | receipted result files | published releases |
 

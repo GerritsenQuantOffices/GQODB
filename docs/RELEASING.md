@@ -1,8 +1,9 @@
 # Releasing 0.1.0 (procedure for the owner)
 
-Nothing in this procedure has been run for a release. The tag, the GitHub release and
-any crates.io publication are the owner's decisions. Every command below that pushes
-or publishes says so; do not run those until you have decided to publish.
+Used for 0.1.0 on 2026-10-18: source only, unsigned tag, GitHub pre-release, no crates.io
+publication. The tag, the GitHub release and any crates.io publication are the owner's
+decisions. Every command below that pushes or publishes says so; do not run those until you
+have decided to publish.
 
 Placeholders: `<version>` is `0.1.0`; commands run from the repository root on the
 commit that will be released (normally `main` after the preparation branches are merged).

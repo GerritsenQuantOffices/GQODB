@@ -7,12 +7,10 @@ convention: a change that is not backwards-compatible bumps the minor version, a
 
 ## [Unreleased]
 
-## [0.1.0] - not yet released
+## [0.1.0] - 2026-10-18
 
-First public preview, source only. The version number is prepared in the repository;
-the tag, the GitHub release and any crates.io publication are decisions of the owner and
-have not been made (see [docs/RELEASING.md](docs/RELEASING.md)). Replace "not yet
-released" with the release date when the tag is created.
+First public preview, source only. Released on 2026-10-18 as a GitHub pre-release (tag `v0.1.0`,
+unsigned); not published to crates.io (see [docs/RELEASING.md](docs/RELEASING.md)).
 
 ### Added
 
