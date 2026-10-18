@@ -112,11 +112,70 @@ fn max_rows_batch() -> RecordBatch {
     .expect("batch")
 }
 
+/// The "string expansion" reproducer: a maximum-row block (about 60 KB with the default `extra`)
+/// whose only dictionary string was grown to `extra` bytes with all lengths and checksums kept
+/// consistent, so it claims rows x `extra` decoded string bytes (62,914,560,000 for 60,000).
+/// Returns the batch the block was grown from (for its schema) and the block.
+pub fn string_bomb_block(mode: Mode, extra: usize) -> (RecordBatch, Vec<u8>) {
+    let batch = max_rows_batch();
+    let batch = batch.project(&[0, 1]).expect("projection");
+    let mut block = real::encode(&batch, mode).expect("encode");
+    let n = block.len();
+    block.resize(n + extra, 0);
+    let size = crate::fixup::grow_real_meta(&mut block, n, extra, 0);
+    block.truncate(size);
+    crate::fixup::real(&mut block);
+    (batch, block)
+}
+
+/// A one-block native segment around `payload` with an honest index (one symbol, time 5), built
+/// from the published container layout, so that the store readers and `ob_store` reach the block.
+pub fn segment_around(batch: &RecordBatch, mode: Mode, payload: &[u8]) -> Vec<u8> {
+    let codec = if matches!(mode, Mode::GqodbBook) {
+        "GQOREAL4/GQOBOOK1"
+    } else {
+        "GQOREAL3/GQOADP02"
+    };
+    let header = serde_json::json!({
+        "schema": serde_json::to_value(batch.schema().as_ref()).expect("schema json"),
+        "time_column": "t", "symbol_column": "sym", "codec": codec,
+    });
+    let mut out = segment::frame(
+        b"GQOBHDR1",
+        &serde_json::to_vec(&header).expect("json"),
+        &[],
+    );
+    let offset = out.len() as u64;
+    let mut entry = serde_json::json!({
+        "offset": offset, "length": 0, "rows": batch.num_rows(),
+        "min_time": 5, "max_time": 5, "symbols": ["BTC"],
+    });
+    let meta = serde_json::to_vec(&entry).expect("json");
+    entry["length"] = serde_json::json!(24 + meta.len() as u64 + payload.len() as u64);
+    out.extend_from_slice(&segment::frame(b"GQOBBLK1", &meta, payload));
+    let index_offset = out.len() as u64;
+    out.extend_from_slice(&segment::frame(
+        b"GQOBIDX1",
+        &[],
+        &serde_json::to_vec(&[entry]).expect("json"),
+    ));
+    let mut trailer = b"GQOBEND1".to_vec();
+    trailer.extend_from_slice(&index_offset.to_le_bytes());
+    trailer.extend_from_slice(&crc32fast::hash(&trailer).to_le_bytes());
+    out.extend_from_slice(&trailer);
+    out
+}
+
 pub fn real_tick() -> Seeds {
     let mut out = real_seeds(Mode::Gqodb, Family::Tick);
     out.push((
         "max-rows-const".into(),
         real::encode(&max_rows_batch(), Mode::Gqodb).expect("encode"),
+    ));
+    // Refused by the decoded-string limit; keeps the mutator next to that boundary.
+    out.push((
+        "string-bomb-60kb".into(),
+        string_bomb_block(Mode::Gqodb, 60_000).1,
     ));
     out
 }
@@ -126,6 +185,10 @@ pub fn real_book() -> Seeds {
     out.push((
         "max-rows-const".into(),
         real::encode(&max_rows_batch(), Mode::GqodbBook).expect("encode"),
+    ));
+    out.push((
+        "string-bomb-60kb".into(),
+        string_bomb_block(Mode::GqodbBook, 60_000).1,
     ));
     out
 }
@@ -206,6 +269,11 @@ pub fn segments() -> Seeds {
             w.finish().unwrap();
         });
         out.push((format!("segment-{name}-max-rows"), bytes));
+        let (batch, block) = string_bomb_block(mode, 60_000);
+        out.push((
+            format!("segment-{name}-string-bomb"),
+            segment_around(&batch, mode, &block),
+        ));
     }
     // Generic-schema segments built by the structure-aware builder, honest only.
     for seed in 1..=40u64 {

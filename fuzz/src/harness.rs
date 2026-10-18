@@ -27,77 +27,6 @@ fn same(a: &anyhow::Result<RecordBatch>, b: &anyhow::Result<RecordBatch>) -> boo
     }
 }
 
-/// KNOWN FINDING, OWNER DECISION PENDING (see docs/FUZZING.md, "Open finding"): `real::decode`,
-/// `Reader::read_block`, `query` and `recover` allocate `rows x longest-dictionary-string` bytes for
-/// a LargeUtf8 column before checking it against any bound, so a ~60 KB input can request tens of
-/// GB. The checked layers (`gqodb-codec` preflight, `Reader::read_block_bounded`) refuse it.
-/// Until the owner decides on a decoded-size cap for the unchecked layer, the targets that call the
-/// unchecked API skip inputs whose estimate (same formula as the codec preflight) exceeds 128 MiB,
-/// so that this one known finding does not mask others.
-pub fn known_string_bomb(block: &[u8]) -> bool {
-    const LIMIT: usize = 128 * 1024 * 1024;
-    if block.len() < 32 || !(block.starts_with(b"GQOREAL3") || block.starts_with(b"GQOREAL4")) {
-        return false;
-    }
-    let n = u32::from_le_bytes(block[8..12].try_into().unwrap()) as usize;
-    let Some(meta) = block.get(12..12usize.saturating_add(n)) else {
-        return false;
-    };
-    let payload = &block[12 + n..];
-    let rows_at = if block.starts_with(b"GQOREAL3") {
-        12
-    } else {
-        8
-    };
-    let Some(rows) = payload.get(rows_at..rows_at + 4) else {
-        return false;
-    };
-    let rows = u32::from_le_bytes(rows.try_into().unwrap()) as usize;
-    let Ok(layout) = serde_json::from_slice::<serde_json::Value>(meta) else {
-        return false;
-    };
-    let widest: usize = layout["columns"]
-        .as_array()
-        .map(|cols| {
-            cols.iter()
-                .map(|c| {
-                    c["dictionary"].as_array().map_or(0, |d| {
-                        d.iter()
-                            .filter_map(|s| s.as_str())
-                            .map(str::len)
-                            .max()
-                            .unwrap_or(0)
-                    })
-                })
-                .map(|w| w.saturating_mul(rows))
-                .fold(0usize, usize::saturating_add)
-        })
-        .unwrap_or(0);
-    widest > LIMIT
-}
-
-/// `known_string_bomb` over every block frame of a segment image (walks frames, trusts nothing).
-fn segment_has_known_string_bomb(data: &[u8]) -> bool {
-    let mut pos = 0usize;
-    while data.len().saturating_sub(pos) >= 24 {
-        let m = u32::from_le_bytes(data[pos + 8..pos + 12].try_into().unwrap()) as usize;
-        let p = u32::from_le_bytes(data[pos + 12..pos + 16].try_into().unwrap()) as usize;
-        let body = pos + 24;
-        let Some(end) = body
-            .checked_add(m)
-            .and_then(|x| x.checked_add(p))
-            .filter(|&e| e <= data.len())
-        else {
-            return false;
-        };
-        if &data[pos..pos + 8] == b"GQOBBLK1" && known_string_bomb(&data[body + m..end]) {
-            return true;
-        }
-        pos = end;
-    }
-    false
-}
-
 pub fn block_decode(data: &[u8]) {
     if let Ok(cols) = block::decode(data) {
         cols.validate()
@@ -158,11 +87,21 @@ thread_local! {
 
 /// Native real-block decoder (`GQOREAL3` tick or `GQOREAL4` book).
 pub fn real_decode(mode: Mode, data: &[u8]) {
-    if known_string_bomb(data) {
-        return;
-    }
     let input = Bytes::copy_from_slice(data);
     let fresh = real::decode(input.clone(), mode);
+    // Anything the unchecked decoder accepts stays within the documented decoded-string limit.
+    if let Ok(batch) = &fresh {
+        let strings: u64 = batch
+            .columns()
+            .iter()
+            .filter_map(|c| c.as_any().downcast_ref::<LargeStringArray>())
+            .map(|a| a.value_data().len() as u64)
+            .sum();
+        assert!(
+            strings <= real::MAX_DECODED_STRING_BYTES,
+            "decoded {strings} string bytes, above the documented limit"
+        );
+    }
     // Differential: a Decoder whose scratch buffer is dirty from earlier inputs must agree.
     let reused = REUSED.with(|d| d.borrow_mut().decode(input.clone(), mode));
     assert!(
@@ -255,15 +194,12 @@ fn index_fields(reader: &Reader, batch: &RecordBatch) -> (Vec<i64>, Vec<String>)
 }
 
 /// Exercise every public read operation of an opened reader; returns decoded blocks, if all decode.
-fn exercise(reader: &mut Reader, data: &[u8]) -> Option<Vec<RecordBatch>> {
+fn exercise(reader: &mut Reader) -> Option<Vec<RecordBatch>> {
     let _ = (reader.schema(), reader.codec(), reader.index_columns());
     let blocks = reader.blocks().to_vec();
     // The documented bounded path first: it must never allocate beyond its budget.
     for i in 0..blocks.len().min(6) {
         let _ = reader.read_block_bounded(i, gqodb_blocks::data::MAX_ROWS, 64 * 1024 * 1024);
-    }
-    if segment_has_known_string_bomb(data) {
-        return None;
     }
     let _ = reader.read_block(blocks.len());
     let all: Option<Vec<RecordBatch>> = (0..blocks.len().min(12))
@@ -307,14 +243,11 @@ fn exercise(reader: &mut Reader, data: &[u8]) -> Option<Vec<RecordBatch>> {
 pub fn store_reader(data: &[u8]) {
     let path = scratch::write("reader.gqodb.ob", data);
     if let Ok(mut reader) = Reader::open(&path) {
-        exercise(&mut reader, data);
+        exercise(&mut reader);
     }
 }
 
 pub fn store_recover(data: &[u8]) {
-    if segment_has_known_string_bomb(data) {
-        return;
-    }
     let path = scratch::write("recover.gqodb.ob", data);
     let Ok(mut recovered) = Reader::recover(&path) else {
         return;
@@ -355,7 +288,7 @@ pub fn store_structured(data: &[u8]) {
     let opened = Reader::open(&path);
     if built.honest {
         let mut reader = opened.unwrap_or_else(|e| panic!("honest segment refused: {e:#}"));
-        let all = exercise(&mut reader, &built.bytes).expect("honest segment must decode");
+        let all = exercise(&mut reader).expect("honest segment must decode");
         assert_eq!(all.len(), built.batches.len().min(12));
         for (got, want) in all.iter().zip(&built.batches) {
             assert!(real::equal(got, want), "block round trip mismatch");
@@ -364,11 +297,8 @@ pub fn store_structured(data: &[u8]) {
             .unwrap_or_else(|e| panic!("honest segment not recoverable: {e:#}"));
         assert_eq!(rec.blocks(), reader.blocks());
     } else {
-        if segment_has_known_string_bomb(&built.bytes) {
-            return;
-        }
         if let Ok(mut reader) = opened {
-            exercise(&mut reader, &built.bytes);
+            exercise(&mut reader);
         }
         if let Ok(mut rec) = Reader::recover(&path) {
             for i in 0..rec.blocks().len() {
