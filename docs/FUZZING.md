@@ -1,6 +1,6 @@
 # Fuzzing the readers and decoders
 
-Status: **partly done; nine defects found and fixed, none open.** 15 libFuzzer targets cover the
+Status: **partly done; nine defects found and fixed in the storage and codec targets, none open.** 15 libFuzzer targets cover the
 block decoders, the store reader and recovery, the codec facade and `gqodb-types`, plus bit-exact
 round-trip targets. Every target ran at least 35 minutes on one machine (the Parquet decoder
 2 x 60 minutes). The campaign found and fixed eight defects, each with a regression test that
@@ -10,6 +10,8 @@ by a 128 MiB limit on decoded string bytes in the unchecked layer
 the changed code were run again for about 11 minutes each and found nothing
 ([Re-run after fix 9](#re-run-after-fix-9)). This is a bounded campaign, not a proof: coverage was
 still growing slowly on several targets when the runs ended, and the unchecked layer is not audited.
+The statements above cover those 15 targets. A 16th target, `lang_parse` (the command language), ran
+10 minutes and found a tenth defect, in `gqodb-lang`; see [Language parser and printer](#language-parser-and-printer-lang_parse).
 
 Nothing here replaces a security review. A checksum detects damage; it does not authenticate who
 wrote a file (see [SECURITY.md](../SECURITY.md)).
@@ -173,7 +175,7 @@ targets executed between 7,000 and 73,000 generated inputs each (7 to 109 per se
 
 ## Findings
 
-Nine defects were fixed, all in `gqodb-blocks`: three in this repository's own code (1, 7 and 9) and six reached through the `parquet`/`arrow-*` dependencies (2-6 and 8). The input is refused with an error after each fix; valid
+Of the 15 storage and codec targets, nine defects were fixed, all in `gqodb-blocks` (the tenth, in `gqodb-lang`, is described under [Language parser and printer](#language-parser-and-printer-lang_parse)): three in this repository's own code (1, 7 and 9) and six reached through the `parquet`/`arrow-*` dependencies (2-6 and 8). The input is refused with an error after each fix; valid
 inputs, the encoders' output for such inputs and every on-disk format are unchanged (fix 9 also makes the encoder refuse a batch above the new limit, see below) (`every_parquet_codec_still_round_trips_after_the_guards`
 and the existing suite pass). Each regression test is in `crates/gqodb-blocks/prototype/tests/malformed.rs` (fix 9 also in `crates/gqodb-store/prototype/tests/segments.rs`). Fixes 2 to 6 and 8 have a
 minimized reproducer stored under `tests/regressions/`; fixes 1 and 7 have no stored file, their tests
@@ -287,7 +289,7 @@ unaudited and use `gqodb-codec` or `Reader::read_block_bounded` for files you di
 
 Target `lang_parse` (added with `gqodb-lang`) feeds UTF-8 text of at most 4096 bytes to `parse`. When
 a script parses, it must print to canonical text that parses again and prints identically, and
-`plan` must not panic for any parsed command. Seeds: 38 command lines taken from the parser and
+`plan` must not panic for any parsed command. Seeds: 38 seed files (one is a three-command script) taken from the parser and
 golden tests and the CLI help; dictionary `dict/gqodb-lang.dict`. Flags as in `run_target.sh`
 (`-max_len=4096`).
 
@@ -304,7 +306,7 @@ parse (`unexpected ...`), which the target reports as a panic. Fix: `range_of` i
 Regression test `keyword_range_must_be_printable_positionally` in
 `crates/gqodb-lang/prototype/tests/parser.rs` failed before the fix and passes after it.
 
-Run once on one machine (two CPUs), one seed. Not run: other sanitizers, longer runs, the CLI
+Two runs (the second after the fix) on one machine, two CPUs, one random libFuzzer seed each. Not run: other sanitizers, longer runs, the CLI
 executor (`gqodb-cli`) and the file readers behind `plan`.
 
 ## What this does not cover
