@@ -371,6 +371,35 @@ fn demo_dir() -> TempDir {
     dir
 }
 
+/// Splits a command line the way a shell would for the simple cases the page uses: words, `"..."` and `'...'`.
+fn shell_words(line: &str) -> Vec<String> {
+    let (mut words, mut word, mut quote, mut started) = (Vec::new(), String::new(), None, false);
+    for c in line.chars() {
+        match (quote, c) {
+            (Some(q), c) if c == q => quote = None,
+            (Some(_), c) => word.push(c),
+            (None, '"' | '\'') => {
+                quote = Some(c);
+                started = true;
+            }
+            (None, c) if c.is_whitespace() => {
+                if started {
+                    words.push(std::mem::take(&mut word));
+                    started = false;
+                }
+            }
+            (None, c) => {
+                word.push(c);
+                started = true;
+            }
+        }
+    }
+    if started {
+        words.push(word);
+    }
+    words
+}
+
 #[test]
 fn every_output_block_in_the_language_reference_is_what_the_command_prints() {
     let doc = std::fs::read_to_string(concat!(
@@ -380,48 +409,79 @@ fn every_output_block_in_the_language_reference_is_what_the_command_prints() {
     .unwrap();
     let dir = demo_dir();
     let lines: Vec<&str> = doc.lines().collect();
+    let command_of = |l: &str| -> Option<String> {
+        let l = l.trim_start();
+        l.strip_prefix("$ gqodb ")
+            .or_else(|| l.strip_prefix("gqodb "))
+            .map(str::to_string)
+    };
     let mut compared = 0;
+    let mut in_text_block = false;
     for (i, line) in lines.iter().enumerate() {
-        let Some(rest) = line.trim_start().strip_prefix("$ gqodb ") else {
+        if let Some(fence) = line.strip_prefix("```") {
+            in_text_block = !in_text_block && fence == "text";
+            continue;
+        }
+        // Only the `text` blocks hold examples with output; the `sh` blocks show invocations to copy.
+        let Some(command) = command_of(line).filter(|_| in_text_block) else {
             continue;
         };
-        let command = rest.trim().trim_matches('"');
         let expected: Vec<&str> = lines[i + 1..]
             .iter()
-            .take_while(|l| !l.starts_with("```") && !l.trim_start().starts_with("$ gqodb "))
+            .take_while(|l| !l.starts_with("```") && command_of(l).is_none())
             .copied()
             .collect();
         // Commands without a block are only parsed (the other test); those on `./data` have no data here.
         if expected.is_empty() || command.contains("./data") {
             continue;
         }
+        let args = shell_words(&command);
         let output = gqodb()
             .current_dir(&dir.0)
-            .arg(command)
+            .args(&args)
             .stdin(Stdio::null())
             .output()
             .unwrap();
-        let got = format!(
-            "{}{}",
+        let (stdout, stderr) = (
             String::from_utf8(output.stdout).unwrap(),
-            String::from_utf8(output.stderr).unwrap()
+            String::from_utf8(output.stderr).unwrap(),
         );
+        // The page says which stream carries what: an error block is standard error; in the others the lines that
+        // start with `-- ` (the footer) are standard error and everything else is standard output.
+        let is_error = expected[0].starts_with("error[");
+        let (mut want_out, mut want_err) = (Vec::new(), Vec::new());
+        for l in &expected {
+            if is_error || l.starts_with("-- ") {
+                want_err.push(*l);
+            } else {
+                want_out.push(*l);
+            }
+        }
+        let at = format!("LANGUAGE.md line {}: {command}", i + 1);
         assert_eq!(
-            got.trim_end(),
-            expected.join("\n").trim_end(),
-            "LANGUAGE.md line {}: {command}",
-            i + 1
+            stdout.trim_end(),
+            want_out.join("\n").trim_end(),
+            "stdout, {at}"
         );
-        let failed = got.starts_with("error[");
+        // The three format blocks (--format) show standard output only, as the page says; the others show the footer too.
+        if !args.iter().any(|a| a == "--format") {
+            assert_eq!(
+                stderr.trim_end(),
+                want_err.join("\n").trim_end(),
+                "stderr, {at}"
+            );
+        }
+        // The page gives no exit code per example. It is derived from the output: an error block means 2, anything
+        // else 0. An example that ends in an exit-1 error (E-PATH, E-FILE) would need this test extended.
         assert_eq!(
             output.status.code(),
-            Some(if failed { 2 } else { 0 }),
-            "{command}"
+            Some(if is_error { 2 } else { 0 }),
+            "{at}"
         );
         compared += 1;
     }
     assert!(
-        compared >= 9,
-        "LANGUAGE.md has at least nine runnable example blocks, found {compared}"
+        compared >= 15,
+        "LANGUAGE.md has 15 runnable example blocks, found {compared}"
     );
 }

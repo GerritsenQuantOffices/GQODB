@@ -43,10 +43,10 @@ sequence,price,quantity
 The rows go to standard output; the three lines that start with `--` are the footer and go to standard
 error. The command selected the rows of `SYNTH` whose sequence number is in the half-open range `[1, 3)`,
 read the directory `./demo`, skipped the order-book file because it holds another stream, and said
-what it scanned. Lines that start with `$ ` are commands to type, written so that the test of this page can parse them;
-command lines that carry flags, or that cannot parse, are shown without the `$ `. The examples on this page
-show what a pipe or a file receives (CSV); on a terminal
-the default format is an aligned table (section 9).
+what it scanned. In the `text` blocks of this page, a command line is followed by what it prints. A line that
+starts with `$ ` is a command of the language as typed, and it parses; a line without `$ ` carries
+flags or does not parse. The `sh` blocks show invocations to copy. The examples show what a pipe
+or a file receives (CSV); on a terminal the default format is an aligned table (section 9).
 
 Three rules shape the whole language:
 
@@ -126,7 +126,7 @@ Lexical rules, as the code applies them:
 - **Symbol and venue.** A bare name starts with an ASCII letter and holds ASCII letters, digits and `. _ : / -`,
   never `..`. Anything else (a leading digit, `+`, a space) must be quoted: `'1INCHUSDT'`,
   `"EUR/USD"`. A bare name that contains characters outside that set is an E-SYNTAX error that says so.
-- **Venue position.** A bare word that follows the symbol and starts with a letter is the venue,
+- **Venue position.** A bare word that follows the symbol and starts with an ASCII letter is the venue,
   unless it is one of `on in take skip columns order desc show explain use help quit exit`, which can
   only be a venue when quoted. A reserved word there gives E-ENGINE (section 11).
 - **Range.** In the positional form, a word after the symbol (and venue) that starts with a digit or a dot
@@ -483,8 +483,8 @@ The **exit codes** of the `gqodb` binary:
 | Code | Meaning |
 | --- | --- |
 | 0 | The command ran. Also when the result was truncated (it says so), and after a closed output pipe. |
-| 1 | It could not read or write: a data file, a path, the `--out` file; also when `--skip-bad` skipped a file (files skipped for another stream or venue do not count). |
-| 2 | The command or its flags are wrong: nothing was read. |
+| 1 | It could not read or write: a data file, a path, the `--out` file; also when `--skip-bad` skipped a file (files skipped for any other reason do not count). |
+| 2 | The command or its flags are wrong: the failing command read nothing. |
 | 3 | The result was truncated and `--strict` was given. |
 
 If a result is both truncated under `--strict` and has files skipped by `--skip-bad`, the code is 3. In a script,
@@ -516,8 +516,9 @@ symbol, or inside quotes, a reserved word is plain text: `show trades as in ./d`
 `as`. The grammar is the same with or without the engine.
 
 E-ENGINE is not given everywhere. A reserved word in the stream position (`show quality SYNTH ...`) is
-E-STREAM, and after `use`, as a help topic or as a name in the keyword form (`show join=1 ...`) it is
-E-SYNTAX.
+E-STREAM; in the clock position (`on join`, `use clock join`) it is E-CLOCK ("unknown clock"); the
+word directly after `use` (`use join`), a help topic (`help join`) and a name in the keyword form
+(`show join=1 ...`) give E-SYNTAX; and as a path (`use path join`) it is plain text.
 
 ## 12. Venue
 
