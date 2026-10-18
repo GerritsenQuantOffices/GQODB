@@ -1,0 +1,147 @@
+[package]
+name = "gqodb-fuzz"
+version = "0.0.0"
+edition = "2024"
+publish = false
+description = "cargo-fuzz harness for the gqodb readers and decoders (not part of the main workspace)"
+
+[package.metadata]
+cargo-fuzz = true
+
+# Own workspace: the stable CI gate (`cargo ... --workspace`) never builds this crate.
+[workspace]
+
+[dependencies]
+libfuzzer-sys = "0.4"
+arbitrary = { version = "1", features = ["derive"] }
+anyhow = "1"
+arrow-array = "=59.3.0"
+arrow-schema = { version = "=59.3.0", features = ["serde"] }
+bytes = "1"
+crc32fast = "1.5"
+serde_json = "1"
+serde = { version = "1", features = ["derive"] }
+gqodb-types = { path = "../crates/gqodb-types" }
+gqodb-blocks = { path = "../crates/gqodb-blocks" }
+gqodb-store = { path = "../crates/gqodb-store" }
+gqodb-codec = { path = "../crates/gqodb-codec" }
+
+[lib]
+name = "gqodb_fuzz"
+path = "src/lib.rs"
+
+[profile.release]
+debug = 1
+
+[[example]]
+name = "seedgen"
+path = "examples/seedgen.rs"
+
+[[bin]]
+name = "block_decode"
+path = "fuzz_targets/block_decode.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "adaptive_decode"
+path = "fuzz_targets/adaptive_decode.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "real_tick_decode"
+path = "fuzz_targets/real_tick_decode.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "real_book_decode"
+path = "fuzz_targets/real_book_decode.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "parquet_decode"
+path = "fuzz_targets/parquet_decode.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "store_reader"
+path = "fuzz_targets/store_reader.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "store_recover"
+path = "fuzz_targets/store_recover.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "store_structured"
+path = "fuzz_targets/store_structured.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "codec_facade"
+path = "fuzz_targets/codec_facade.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "codec_schema"
+path = "fuzz_targets/codec_schema.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "types_parse"
+path = "fuzz_targets/types_parse.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "roundtrip_columns"
+path = "fuzz_targets/roundtrip_columns.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "roundtrip_real"
+path = "fuzz_targets/roundtrip_real.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "roundtrip_codec"
+path = "fuzz_targets/roundtrip_codec.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "roundtrip_store"
+path = "fuzz_targets/roundtrip_store.rs"
+test = false
+doc = false
+bench = false
+
+[[example]]
+name = "string_bomb"
+path = "examples/string_bomb.rs"

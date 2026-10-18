@@ -1,0 +1,1 @@
+{"reading":{"domain":{"epoch":1,"session_id":[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]},"monotonic_ns":500,"read_span_ns":10,"utc_ns":1000000},"state":{"base_error_ns":50,"collection_started_mono_ns":0,"domain":{"epoch":1,"session_id":[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]},"growth_allowance_ppb":200,"id":1,"published_mono_ns":100,"synchronized":true,"valid_until_mono_ns":10000}}

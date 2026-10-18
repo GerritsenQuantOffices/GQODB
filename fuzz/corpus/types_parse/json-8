@@ -1,0 +1,1 @@
+{"domain":{"session_id":[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],"epoch":1},"id":1,"collection_started_mono_ns":0,"published_mono_ns":100,"valid_until_mono_ns":10000,"synchronized":true,"base_error_ns":50,"growth_allowance_ppb":200}

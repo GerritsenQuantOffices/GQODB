@@ -1,0 +1,53 @@
+name: Fuzz smoke
+# Short libFuzzer run per target (nightly toolchain, ASan, debug assertions on).
+# Separate from rust.yml: the stable gate never builds the fuzz crate.
+on:
+  pull_request:
+    paths:
+      - "crates/**"
+      - "fuzz/**"
+      - ".github/workflows/fuzz.yml"
+  workflow_dispatch:
+    inputs:
+      seconds:
+        description: "Seconds per target"
+        default: "60"
+  schedule:
+    - cron: "17 3 * * 1"
+permissions:
+  contents: read
+env:
+  CARGO_FUZZ_VERSION: "0.13.2"
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install nightly toolchain (cargo-fuzz needs sanitizer flags)
+        run: rustup toolchain install nightly --profile minimal
+      - name: Install pinned cargo-fuzz
+        run: cargo +nightly install cargo-fuzz --version "$CARGO_FUZZ_VERSION" --locked
+      - name: Build all fuzz targets
+        working-directory: fuzz
+        run: cargo +nightly fuzz build
+      - name: Run each target
+        working-directory: fuzz
+        env:
+          FUZZ_BIN_DIR: ${{ github.workspace }}/fuzz/target/x86_64-unknown-linux-gnu/release
+          FUZZ_WORK: ${{ runner.temp }}/fuzz-work
+          SECONDS_PER_TARGET: ${{ github.event.inputs.seconds || (github.event_name == 'schedule' && '600') || '60' }}
+        run: |
+          set -euo pipefail
+          for target in $(cargo +nightly fuzz list); do
+            echo "::group::$target"
+            ./run_target.sh "$target" "$SECONDS_PER_TARGET"
+            echo "::endgroup::"
+          done
+      - name: Keep reproducers of any finding
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-artifacts
+          path: ${{ runner.temp }}/fuzz-work/artifacts
+          if-no-files-found: ignore
