@@ -10,8 +10,10 @@ by a 128 MiB limit on decoded string bytes in the unchecked layer
 the changed code were run again for about 11 minutes each and found nothing
 ([Re-run after fix 9](#re-run-after-fix-9)). This is a bounded campaign, not a proof: coverage was
 still growing slowly on several targets when the runs ended, and the unchecked layer is not audited.
-The statements above cover those 15 targets. A 16th target, `lang_parse` (the command language), ran
-10 minutes and found a tenth defect, in `gqodb-lang`; see [Language parser and printer](#language-parser-and-printer-lang_parse).
+The statements above cover those 15 targets. A 16th target, `lang_parse` (the command language), found a
+tenth defect, in `gqodb-lang`, in a first run of about 99 seconds; a run of 601 seconds after the fix and a
+run of 600 seconds after the target began to render every diagnostic found nothing; see
+[Language parser and printer](#language-parser-and-printer-lang_parse).
 
 Nothing here replaces a security review. A checksum detects damage; it does not authenticate who
 wrote a file (see [SECURITY.md](../SECURITY.md)).
@@ -38,13 +40,14 @@ $ cargo run --release --example seedgen -- corpus     # regenerate the seed corp
 `run_target.sh` reads seeds from `fuzz/corpus/<target>` (never written) and keeps its working corpus,
 artifacts and logs under `FUZZ_WORK`. Resource limits are part of the harness so that a hang or an
 over-allocation is a finding rather than noise: input at most 64 KiB (4 KiB for the generated-data
-targets), 10 s per input, 4096 MB RSS and 4096 MB per allocation. `.github/workflows/fuzz.yml` runs
+targets and for `lang_parse`), 10 s per input, 4096 MB RSS and 4096 MB per allocation. `.github/workflows/fuzz.yml` runs
 60 s per target on pull requests with the pinned `cargo-fuzz` 0.13.2 (a weekly 600 s run is
 scheduled); that workflow has not been run on GitHub yet.
 
-Seeds (`fuzz/corpus/`, about 1.4 MB) are generated from the repository's own synthetic fixtures
-(`gqodb_blocks::data::generate`, `gqodb_codec::fixture`, a fixed-seed generator). They contain no
-market data. Since fix 9 the `real_*` and `store_*` corpora also hold the 60 KB reproducer of that
+Seeds (`fuzz/corpus/`, 839,335 bytes in 252 files) for the 15 storage and codec targets are generated from the
+repository's own synthetic fixtures (`gqodb_blocks::data::generate`, `gqodb_codec::fixture`, a fixed-seed
+generator); the 38 seeds of `lang_parse` were chosen by hand from the parser and golden tests and the help
+text. They contain no market data. Since fix 9 the `real_*` and `store_*` corpora also hold the 60 KB reproducer of that
 finding (as a block, and as a one-block segment) so that the refusal path is reached from the first
 execution. `fuzz/dict/gqodb.dict` holds the magic strings and metadata keys.
 
@@ -289,7 +292,9 @@ unaudited and use `gqodb-codec` or `Reader::read_block_bounded` for files you di
 
 Target `lang_parse` (added with `gqodb-lang`) feeds UTF-8 text of at most 4096 bytes to `parse`. When
 a script parses, it must print to canonical text that parses again and prints identically, and
-`plan` must not panic for any parsed command. Seeds: 38 seed files (one is a three-command script) taken from the parser and
+`plan` must not panic for any parsed command. Since run 3, every diagnostic of a failed parse or plan must also render
+without a panic (`Diagnostic::render` and `render_all`, which cut a long source line on character boundaries);
+runs 1 and 2 did not call them. Seeds: 38 seed files (one is a three-command script) taken from the parser and
 golden tests and the CLI help; dictionary `dict/gqodb-lang.dict`. Flags as in `run_target.sh`
 (`-max_len=4096`).
 
@@ -297,6 +302,7 @@ golden tests and the CLI help; dictionary `dict/gqodb-lang.dict`. Flags as in `r
 | --- | ---: | ---: | --- | --- |
 | 1 | about 99 (stopped by the finding) | 198,208 | not recorded at the stop | 1 finding |
 | 2, after the fix | 601 | 7,419,264 | cov 1927, ft 21944, corpus 6722 | 0 findings |
+| 3, the target now calls `render` and `render_all` | 601 | 4,574,890 | cov 2072, ft 22511, corpus 6651 | 0 findings |
 
 **Finding 10 (fixed).** `show ... range=sy6-03-01..2026-04/02 ...` was accepted: the keyword form
 took any atom containing `..` as a range, but the canonical text writes the range positionally,
@@ -306,8 +312,12 @@ parse (`unexpected ...`), which the target reports as a panic. Fix: `range_of` i
 Regression test `keyword_range_must_be_printable_positionally` in
 `crates/gqodb-lang/prototype/tests/parser.rs` failed before the fix and passes after it.
 
-Two runs (the second after the fix) on one machine, two CPUs, one random libFuzzer seed each. Not run: other sanitizers, longer runs, the CLI
-executor (`gqodb-cli`) and the file readers behind `plan`.
+Three runs (the second after the fix, the third after the target began to render diagnostics) on one machine, two
+CPUs at `nice 19`, one random libFuzzer seed each, 600 seconds requested for runs 2 and 3 (libFuzzer reports 601).
+Run 3 averaged 7,612 executions per second against 12,345 in run 2 (7,419,264 in 601 seconds); the target now also
+renders diagnostics, and builds and test runs were using other CPUs of the machine at the same time. The cause of the
+difference was not separated. Not run: other sanitizers, longer runs, and the CLI executor (`gqodb-cli`), which is
+the part that reads files (`plan` itself reads none).
 
 ## What this does not cover
 
