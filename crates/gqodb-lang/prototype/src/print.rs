@@ -1,12 +1,7 @@
 //! The canonical text of a parsed script: aliases replaced by canonical clock names, quotes only where needed,
 //! one command per line. `parse(to_canonical(parse(x))) == parse(x)` up to source positions.
 use crate::ast::{Bound, Command, Script, Show, Step};
-use crate::parser::RESERVED;
-
-const KEYWORDS: &[&str] = &[
-    "on", "in", "take", "skip", "columns", "order", "desc", "show", "explain", "use", "help",
-    "quit", "exit",
-];
+use crate::parser::{KEYWORDS, RESERVED};
 
 fn quote(text: &str) -> String {
     if text.contains('\'') {

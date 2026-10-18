@@ -180,3 +180,55 @@ fn the_canonical_form_uses_canonical_clock_names_and_the_positional_shape() {
         "use clock received\nuse path 'my data'\nhelp clocks\nquit\nexplain show trades A in ./d"
     );
 }
+
+/// The debug text of a parse with the source positions removed (`Span { start: 3, end: 9 }` becomes `Span`), so that
+/// the commands from two different texts can be compared as syntax trees.
+fn without_spans(debug: &str) -> String {
+    let (mut out, mut rest) = (String::new(), debug);
+    while let Some(i) = rest.find("Span {") {
+        out.push_str(&rest[..i]);
+        out.push_str("Span");
+        let close = rest[i..].find('}').expect("a span ends with a brace");
+        rest = &rest[i + close + 1..];
+    }
+    out.push_str(rest);
+    out
+}
+
+fn tree(src: &str) -> Option<String> {
+    parse(src).ok().map(|s| without_spans(&format!("{s:?}")))
+}
+
+#[test]
+fn the_printed_text_parses_to_the_same_syntax_tree_not_only_the_same_text() {
+    assert_eq!(
+        without_spans("Spanned { node: Take(5), span: Span { start: 1, end: 4 } }"),
+        "Spanned { node: Take(5), span: Span }"
+    );
+    let mut cases: Vec<String> = Vec::new();
+    let mut rng = Rng(0xA57);
+    for _ in 0..20_000 {
+        cases.push(generate(&mut rng));
+    }
+    // the hand-picked seeds of the fuzz target: some do not parse, those are not part of this property
+    let seeds = concat!(env!("CARGO_MANIFEST_DIR"), "/../../fuzz/corpus/lang_parse");
+    let mut seeds_used = 0;
+    for entry in std::fs::read_dir(seeds).expect("the fuzz seeds are in the repository") {
+        if let Ok(text) = std::fs::read_to_string(entry.unwrap().path()) {
+            if parse(&text).is_ok() {
+                seeds_used += 1;
+            }
+            cases.push(text);
+        }
+    }
+    assert!(seeds_used >= 20, "{seeds_used} seeds parse");
+    for src in &cases {
+        let Some(first) = tree(src) else { continue };
+        let canonical = to_canonical(&parse(src).unwrap());
+        assert_eq!(
+            tree(&canonical),
+            Some(first),
+            "{src:?}\ncanonical: {canonical:?}"
+        );
+    }
+}

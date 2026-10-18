@@ -148,7 +148,7 @@ gqodb "show stream=trades symbol=SYNTH range=x..y clock=sequence path=./demo"
 error[E-RANGE]: `x..y` is not a range
   show stream=trades symbol=SYNTH range=x..y clock=sequence path=./demo
                                         ^^^^
-  help: a range is <begin>..<end>, e.g. 2026-03-01..2026-03-02; leave a side empty for open
+  help: a range starts with a date, a sequence number or `..`, e.g. 2026-03-01..2026-03-02; leave a side empty for open
 ```
 
 More commands (shown without output, because `./data` is not part of this repository):
@@ -170,7 +170,7 @@ $ gqodb "use path ./demo; use clock sequence; show trades SYNTH 2.. | columns se
 sequence
 2
 3
--- clock sequence, range [2, )
+-- clock sequence, range [2, ..)
 -- files: 1 read, 1 skipped · blocks: 1 read of 1 in the files read · bytes: 2455 · rows: 3 scanned, 2 out
 -- skipped demo.gqodb.ob: other stream
 ```
@@ -240,10 +240,10 @@ $ gqodb "show trades SYNTH 1970-01-01.. on source in ./demo | columns sequence, 
 sequence,source_utc_ns
 1,1970-01-01T00:00:00.000000008Z
 3,1970-01-01T00:00:00.000000010Z
--- clock source, range [1970-01-01T00:00:00.000000000Z, )
+-- clock source, range [1970-01-01T00:00:00.000000000Z, ..)
 -- files: 1 read, 1 skipped · blocks: 1 read of 1 in the files read · bytes: 2455 · rows: 3 scanned, 2 out
 -- skipped demo.gqodb.ob: other stream
--- excluded: 1 rows without a source value
+-- excluded: 1 row without a source value
 ```
 
 **Indexed or not.** A segment file has one index column for time. Only on that column can a block be

@@ -220,10 +220,10 @@ target/release/gqodb --format table "show trades SYNTH 1970-01-01.. on source in
 # --------  ------------------------------
 # 1         1970-01-01T00:00:00.000000008Z
 # 3         1970-01-01T00:00:00.000000010Z
-# -- clock source, range [1970-01-01T00:00:00.000000000Z, )
+# -- clock source, range [1970-01-01T00:00:00.000000000Z, ..)
 # -- files: 1 read, 1 skipped · blocks: 1 read of 1 in the files read · bytes: 2455 · rows: 3 scanned, 2 out
 # -- skipped demo.gqodb.ob: other stream
-# -- excluded: 1 rows without a source value
+# -- excluded: 1 row without a source value
 ```
 
 A range always names its clock; there is no default. A row that is empty on the chosen clock (the

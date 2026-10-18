@@ -100,6 +100,10 @@ pub fn known_columns(stream: Stream) -> &'static [&'static str] {
     }
 }
 
+/// The first and the last instant a time can have: the ends of a 64-bit count of nanoseconds since 1970.
+const EARLIEST: &str = "1677-09-21T00:12:43.145224192Z";
+const LATEST: &str = "2262-04-11T23:47:16.854775807Z";
+
 fn clock_help() -> String {
     "add one of: on available | on received | on source | on sequence".to_string()
 }
@@ -125,7 +129,7 @@ fn resolve_bound(bound: &Spanned<Bound>, clock: ClockName) -> Result<Option<i64>
         let (msg, help) = match e {
             TimeError::Syntax => (format!("`{text}` is not a UTC time"), "use 2026-03-01 or 2026-03-01T12:30:00Z (fraction of a second up to 9 digits; always UTC)"),
             TimeError::Calendar => (format!("`{text}` is not a real date or time"), "check month, day, hour, minute and second"),
-            TimeError::OutOfRange => (format!("`{text}` is outside the supported years 1677 to 2262"), "times are whole nanoseconds in a 64-bit number"),
+            TimeError::OutOfRange => (format!("`{text}` is outside the supported times {EARLIEST} to {LATEST}"), "times are whole nanoseconds in a 64-bit number; a date alone is the start of that day"),
         };
         Diagnostic::new(Code::Range, msg, bound.span).with_help(help)
     })

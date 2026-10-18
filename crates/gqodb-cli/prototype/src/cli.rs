@@ -22,7 +22,7 @@ commands:
   show stream=<s> symbol=<x> [venue=<v>] [range=<b>..<e>] [clock=<c>] [path=<p>] [| <step>]...
   explain show ...                 what would be read, without reading it
   use clock <clock> | use path <path>
-  help | quit
+  help [clocks|ranges|steps|flags|errors] | quit
 
 streams: trades, quotes, book
 clocks:  available | received (local, wall) | source (broker) | sequence
@@ -35,7 +35,7 @@ examples:
 
 flags: --format table|csv|json|ndjson  --out <new file>  --time iso|ns
        --max-rows <n> (default 1000)  --max-scan-rows <n> (default 1048576)  --max-blocks <n> (default 4096)
-       --strict (a truncated result is an error)  --skip-bad (skip unreadable files, with a notice)
+       --strict (a truncated result is an error, exit 3)  --skip-bad (skip unreadable files, with a notice)
 ";
 
 #[derive(Clone, Debug, Default)]
@@ -43,6 +43,8 @@ pub struct Flags {
     pub format: Option<Format>,
     pub out: Option<String>,
     pub opts: Options,
+    /// `--help` was given: print the general help, whatever else is on the line.
+    pub help: bool,
 }
 
 /// Separates the flags from the words of the command.
@@ -97,7 +99,7 @@ pub fn split_flags(args: &[String]) -> Result<(Flags, Vec<String>), String> {
             "max-blocks" => flags.opts.max_blocks = number(name, value(name)?)?,
             "strict" => flags.opts.strict = true,
             "skip-bad" => flags.opts.skip_bad = true,
-            "help" => words.push("help".to_string()),
+            "help" => flags.help = true,
             other => return Err(format!("unknown flag `--{other}`")),
         }
     }
@@ -129,19 +131,32 @@ pub fn join_args(words: &[String]) -> String {
     parts.join(" ")
 }
 
+fn plural(n: u64, one: &str) -> String {
+    if n == 1 {
+        format!("1 {one}")
+    } else {
+        format!("{n} {one}s")
+    }
+}
+
 fn footer(err: &mut dyn Write, plan: &gqodb_lang::Plan, r: &Report, opts: &Options) {
     let range = plan.range.map(|rg| {
-        let show = |v: Option<i64>| match v {
-            None => String::new(),
+        // `..` marks a side that is open, as it does in the language.
+        let side = |v: Option<i64>| match v {
+            None => "..".to_string(),
             Some(v) if rg.clock == gqodb_lang::ClockName::Sequence => v.to_string(),
             Some(v) => gqodb_lang::time::format_instant(v),
         };
-        format!(
-            "clock {}, range [{}, {})",
-            rg.clock.name(),
-            show(rg.start),
-            show(rg.end)
-        )
+        if rg.start.is_none() && rg.end.is_none() {
+            format!("clock {}, range (open)", rg.clock.name())
+        } else {
+            format!(
+                "clock {}, range [{}, {})",
+                rg.clock.name(),
+                side(rg.start),
+                side(rg.end)
+            )
+        }
     });
     let _ = writeln!(
         err,
@@ -169,8 +184,17 @@ fn footer(err: &mut dyn Write, plan: &gqodb_lang::Plan, r: &Report, opts: &Optio
         let clock = plan.range.map_or("the chosen clock", |rg| rg.clock.name());
         let _ = writeln!(
             err,
-            "-- excluded: {} rows without a {} value",
-            r.null_clock_excluded, clock
+            "-- excluded: {} without a {} value",
+            plural(r.null_clock_excluded, "row"),
+            clock
+        );
+    }
+    if let (Some(order), true) = (plan.order, r.null_order_last > 0) {
+        let _ = writeln!(
+            err,
+            "-- last: {} without a {} value",
+            plural(r.null_order_last, "row"),
+            order.clock.name()
         );
     }
     if let Some(t) = r.truncated {
@@ -326,6 +350,12 @@ fn too_long(err: &mut dyn Write) -> u8 {
     2
 }
 
+/// `--out` names one file that is never overwritten, so it can take the result of one command only.
+fn out_takes_one_show(err: &mut dyn Write) -> u8 {
+    let _ = writeln!(err, "error[E-SYNTAX]: --out takes exactly one show command");
+    2
+}
+
 /// Like `run_text`; also says whether the run has to end altogether.
 fn run_commands(
     src: &str,
@@ -345,6 +375,14 @@ fn run_commands(
             return (2, Stop::No);
         }
     };
+    let reads = script
+        .commands
+        .iter()
+        .filter(|c| matches!(c.node, Command::Show(_) | Command::Explain(_)))
+        .count();
+    if flags.out.is_some() && reads > 1 {
+        return (out_takes_one_show(err), Stop::No);
+    }
     for cmd in &script.commands {
         match &cmd.node {
             Command::UseClock(_) | Command::UsePath(_) => {
@@ -415,6 +453,9 @@ pub fn repl(
     out: &mut dyn Write,
     err: &mut dyn Write,
 ) -> u8 {
+    if flags.out.is_some() {
+        return out_takes_one_show(err);
+    }
     let mut session = Session::default();
     loop {
         if tty_in {
@@ -487,6 +528,10 @@ pub fn main_with(args: Vec<String>, stdin_is_tty: bool) -> u8 {
             return 2;
         }
     };
+    if flags.help {
+        let _ = write!(out, "{HELP}");
+        return 0;
+    }
     let mut session = Session::default();
     match words.first().map(String::as_str) {
         None => {
@@ -502,6 +547,10 @@ pub fn main_with(args: Vec<String>, stdin_is_tty: bool) -> u8 {
         }
         Some("run") if words.len() == 2 => {
             run_file(&words[1], &mut session, &flags, tty_out, &mut out, &mut err)
+        }
+        Some("run") => {
+            let _ = writeln!(err, "error[E-SYNTAX]: `run` takes exactly one file");
+            2
         }
         Some("-h") if words.len() == 1 => {
             let _ = write!(out, "{HELP}");

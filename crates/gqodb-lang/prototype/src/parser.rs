@@ -1,5 +1,5 @@
 //! Recursive-descent parser. One command per line (or per `;`); the first error of a command is reported,
-//! the next command is still parsed, so a script shows all its broken lines at once.
+//! the next command is still parsed, so a script shows its broken lines together (the report shows the first 20).
 use crate::ast::{Bound, CLOCK_CHOICES, ClockName, Command, RangeExpr, Script, Show, Step, Stream};
 use crate::diag::{Code, Diagnostic};
 use crate::lexer::{Tok, Token, lex};
@@ -17,8 +17,8 @@ pub const RESERVED: &[&str] = &[
     "capture",
     "ledger",
 ];
-/// Words that can never be an unquoted venue.
-const KEYWORDS: &[&str] = &[
+/// Words that can never be an unquoted venue. The printer quotes them too, from this same list.
+pub(crate) const KEYWORDS: &[&str] = &[
     "on", "in", "take", "skip", "columns", "order", "desc", "show", "explain", "use", "help",
     "quit", "exit",
 ];
@@ -82,6 +82,12 @@ impl<'a> Cur<'a> {
     fn at_atom(&self, word: &str) -> bool {
         matches!(self.peek().map(|t| &t.tok), Some(Tok::Atom(a)) if a.eq_ignore_ascii_case(word))
     }
+}
+
+/// A word that starts like a range: with a digit or a dot. The canonical text writes a range positionally, where only
+/// such a word is read as one; the parser and the printer both rely on this.
+pub(crate) fn looks_like_range(word: &str) -> bool {
+    word.starts_with(|c: char| c.is_ascii_digit() || c == '.')
 }
 
 fn parse_command(t: &[Token]) -> Result<Spanned<Command>, Diagnostic> {
@@ -230,15 +236,9 @@ fn range_of(tok: &Token) -> Result<Spanned<RangeExpr>, Diagnostic> {
     let Tok::Atom(a) = &tok.tok else {
         return Err(unexpected(tok));
     };
-    // A range starts with a digit or a dot: the canonical text writes it positionally, where only
-    // such an atom is read as a range.
-    let Some((begin, end)) = a
-        .starts_with(|c: char| c.is_ascii_digit() || c == '.')
-        .then(|| a.split_once(".."))
-        .flatten()
-    else {
+    let Some((begin, end)) = looks_like_range(a).then(|| a.split_once("..")).flatten() else {
         return Err(Diagnostic::new(Code::Range, format!("`{a}` is not a range"), tok.span)
-            .with_help("a range is <begin>..<end>, e.g. 2026-03-01..2026-03-02; leave a side empty for open"));
+            .with_help("a range starts with a date, a sequence number or `..`, e.g. 2026-03-01..2026-03-02; leave a side empty for open"));
     };
     if end.contains("..") {
         return Err(Diagnostic::new(
@@ -304,8 +304,7 @@ fn parse_show(cur: &mut Cur, verb: Span) -> Result<Show, Diagnostic> {
     let mut range = None;
     let mut clock = None;
     if let Some(tok) = cur.peek() {
-        if matches!(&tok.tok, Tok::Atom(a) if a.starts_with(|c: char| c.is_ascii_digit() || c == '.'))
-        {
+        if matches!(&tok.tok, Tok::Atom(a) if looks_like_range(a)) {
             cur.i += 1;
             range = Some(range_of(tok)?);
             if cur.at_atom("on") {

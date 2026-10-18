@@ -165,7 +165,7 @@ fn two_files_with_different_scales_stay_exact_per_row_even_when_sorted_together(
 }
 
 #[test]
-fn every_clock_empty_means_an_empty_answer_with_a_count() {
+fn an_empty_source_clock_in_every_row_means_an_empty_answer_with_a_count() {
     let dir = TempDir::new();
     let mut r = rows(3);
     for row in &mut r {
@@ -206,7 +206,10 @@ fn help_has_topics() {
     assert!(gqodb_cli::help::topic("nonsense").is_none());
     let output = gqodb().args(["help clocks"]).output().unwrap();
     assert_eq!(output.status.code(), Some(0));
-    assert!(String::from_utf8_lossy(&output.stdout).contains("received"));
+    assert!(
+        String::from_utf8_lossy(&output.stdout).contains("there is no default"),
+        "the topic text, not the general help"
+    );
     let output = gqodb().args(["help nonsense"]).output().unwrap();
     assert_eq!(output.status.code(), Some(2));
     assert!(
@@ -393,12 +396,16 @@ fn shell_words(line: &str) -> Vec<String> {
                     started = false;
                 }
             }
+            (None, '|' | ';' | '&' | '<' | '>' | '$' | '`') => {
+                panic!("`{c}` outside quotes would be shell syntax, not a plain word: {line}")
+            }
             (None, c) => {
                 word.push(c);
                 started = true;
             }
         }
     }
+    assert!(quote.is_none(), "an open quote in: {line}");
     if started {
         words.push(word);
     }
@@ -1004,4 +1011,387 @@ fn a_file_with_a_wrong_scale_or_a_wrong_clock_type_is_a_broken_file_not_a_wrong_
         .execute(&q(&dir), &Options::default(), &mut sink)
         .unwrap();
     assert_eq!(sink.texts("price"), ["0.00123"]);
+}
+
+// ---- the fix wave after the final review: group 2 ----
+
+/// A directory with `n` files of three blocks of four rows each.
+fn many_files(n: usize) -> TempDir {
+    let dir = TempDir::new();
+    for f in 0..n {
+        let blocks: Vec<Vec<Trade>> = (0..3)
+            .map(|b| {
+                (0..4)
+                    .map(|i| {
+                        trade(
+                            "EURUSD",
+                            (f * 12 + b * 4 + i) as i64,
+                            (f * 12 + b * 4 + i) as i64 + 1,
+                        )
+                    })
+                    .collect()
+            })
+            .collect();
+        write_trades(
+            &dir.path(&format!("f{f:02}.gqodb.tick")),
+            &blocks,
+            None,
+            5,
+            2,
+        );
+    }
+    dir
+}
+
+fn stderr_of(args: &[&str]) -> (Option<i32>, String, String) {
+    let o = gqodb().args(args).stdin(Stdio::null()).output().unwrap();
+    (
+        o.status.code(),
+        String::from_utf8_lossy(&o.stdout).into_owned(),
+        String::from_utf8_lossy(&o.stderr).into_owned(),
+    )
+}
+
+#[test]
+fn out_takes_exactly_one_show_and_anything_else_is_refused_before_anything_happens() {
+    let dir = many_files(1);
+    let target = dir.path("res.csv");
+    let t = target.display().to_string();
+    let one = format!("show trades EURUSD in {} | take 1", dir.s());
+    let message = "error[E-SYNTAX]: --out takes exactly one show command\n";
+    // two shows in one command line, in a script, a show and an explain
+    for text in [
+        format!("{one}; {one}"),
+        format!("{one}\n{one}"),
+        format!("{one}; explain {one}"),
+    ] {
+        let (code, out, err) = stderr_of(&["--out", &t, &text]);
+        assert_eq!(
+            (code, out.as_str(), err.as_str()),
+            (Some(2), "", message),
+            "{text}"
+        );
+        assert!(!target.exists(), "nothing is created: {text}");
+    }
+    std::fs::write(dir.path("s.gq"), format!("{one}\n{one}\n")).unwrap();
+    let script = dir.path("s.gq").display().to_string();
+    let (code, _, err) = stderr_of(&["--out", &t, "run", &script]);
+    assert_eq!((code, err.as_str()), (Some(2), message));
+    assert!(!target.exists());
+    // the REPL is refused without reading a line
+    let o = gqodb_stdin_bytes(&["--out", &t], format!("{one}\n").as_bytes());
+    assert_eq!(o.status.code(), Some(2));
+    assert_eq!(String::from_utf8_lossy(&o.stderr), message);
+    assert!(!target.exists());
+    // exactly one show still works
+    let (code, _, err) = stderr_of(&["--out", &t, &one]);
+    assert_eq!(code, Some(0), "{err}");
+    assert!(target.exists());
+}
+
+#[test]
+fn a_file_that_lacks_a_column_leaves_no_header_and_with_skip_bad_it_is_skipped() {
+    use arrow_schema::DataType;
+    let dir = TempDir::new();
+    hand_written(&dir.path("h.gqodb.tick"), "5", DataType::Int64);
+    let plan = plan_of(&format!(
+        "show trades EURUSD in {} | columns quantity",
+        dir.s()
+    ));
+    let mut sink = Collect::default();
+    let err = FileExecutor
+        .execute(&plan, &Options::default(), &mut sink)
+        .unwrap_err();
+    assert!(
+        matches!(&err, ExecError::File { reason, .. } if reason == "has no column `quantity`"),
+        "{err}"
+    );
+    assert!(
+        sink.columns.is_empty(),
+        "no header was written for a run that failed: {:?}",
+        sink.columns
+    );
+    let mut sink = Collect::default();
+    let report = FileExecutor
+        .execute(
+            &plan,
+            &Options {
+                skip_bad: true,
+                ..Options::default()
+            },
+            &mut sink,
+        )
+        .unwrap();
+    assert_eq!(report.bad_files.len(), 1);
+    assert_eq!(report.bad_files[0].0, "h.gqodb.tick");
+    assert_eq!(
+        (sink.columns.clone(), sink.rows.len()),
+        (vec!["quantity".to_string()], 0)
+    );
+}
+
+#[test]
+fn a_later_file_with_other_columns_is_skipped_with_skip_bad_and_an_error_without_it() {
+    use arrow_schema::DataType;
+    let dir = TempDir::new();
+    write_trades(&dir.path("a.gqodb.tick"), &[rows(2)], None, 5, 2);
+    hand_written(&dir.path("b.gqodb.tick"), "5", DataType::Int64);
+    let plan = plan_of(&format!("show trades EURUSD in {}", dir.s()));
+    let mut sink = Collect::default();
+    let err = FileExecutor
+        .execute(&plan, &Options::default(), &mut sink)
+        .unwrap_err();
+    assert!(
+        matches!(&err, ExecError::File { path, reason } if path == "b.gqodb.tick" && reason.starts_with("columns differ from the first file")),
+        "{err}"
+    );
+    let mut sink = Collect::default();
+    let report = FileExecutor
+        .execute(
+            &plan,
+            &Options {
+                skip_bad: true,
+                ..Options::default()
+            },
+            &mut sink,
+        )
+        .unwrap();
+    assert_eq!((sink.rows.len(), report.files_read), (2, 1));
+    assert_eq!(report.bad_files.len(), 1);
+    assert_eq!(report.bad_files[0].0, "b.gqodb.tick");
+}
+
+#[test]
+fn the_block_count_in_the_footer_says_which_files_it_covers() {
+    let dir = many_files(10);
+    let q = format!("show trades EURUSD in {}", dir.s());
+    let (code, _, err) = stderr_of(&["--format", "csv", &q]);
+    assert_eq!(code, Some(0), "{err}");
+    assert!(
+        err.contains("blocks: 30 read of 30 in the files read"),
+        "{err}"
+    );
+    // take 5 stops inside the first file: the other nine are not opened, and the footer does not pretend otherwise
+    let (_, _, err) = stderr_of(&["--format", "csv", &format!("{q} | take 5")]);
+    assert!(err.contains("files: 1 read, 0 skipped"), "{err}");
+    assert!(
+        err.contains("blocks: 2 read of 3 in the files read"),
+        "{err}"
+    );
+}
+
+#[test]
+fn skip_bad_names_the_file_once() {
+    let dir = TempDir::new();
+    write_trades(&dir.path("a.gqodb.tick"), &[rows(4)], None, 5, 2);
+    write_trades(&dir.path("b.gqodb.tick"), &[rows(4)], None, 5, 2);
+    let bytes = std::fs::read(dir.path("b.gqodb.tick")).unwrap();
+    std::fs::write(dir.path("b.gqodb.tick"), &bytes[..bytes.len() - 7]).unwrap();
+    let q = format!("show trades EURUSD in {}", dir.s());
+    let (code, _, err) = stderr_of(&["--skip-bad", "--format", "csv", &q]);
+    assert_eq!(code, Some(1));
+    let line = err
+        .lines()
+        .find(|l| l.starts_with("-- could not read "))
+        .unwrap();
+    assert_eq!(line.matches("b.gqodb.tick").count(), 1, "{line}");
+}
+
+#[test]
+fn explain_honours_skip_bad_and_counts_bytes_over_the_blocks_it_would_read() {
+    let dir = TempDir::new();
+    let blocks: Vec<Vec<Trade>> = (0..3)
+        .map(|b| {
+            (0..4)
+                .map(|i| trade("EURUSD", 100 * (b + 1) + i, 4 * b + i + 1))
+                .collect()
+        })
+        .collect();
+    write_trades(&dir.path("a.gqodb.tick"), &blocks, None, 5, 2);
+    write_trades(&dir.path("b.gqodb.tick"), &blocks, None, 5, 2);
+    let lengths: Vec<u64> = gqodb_store::Reader::open(dir.path("a.gqodb.tick"))
+        .unwrap()
+        .blocks()
+        .iter()
+        .map(|b| b.length)
+        .collect();
+    let q = format!(
+        "explain show trades EURUSD {}..{} on available in {}",
+        at(200),
+        at(300),
+        dir.s()
+    );
+    let lines = FileExecutor
+        .explain(&plan_of(&q), &Options::default())
+        .unwrap();
+    let want = format!(
+        "a.gqodb.tick: 1 of 3 blocks to read (index on available skips blocks outside the range); at most {} bytes",
+        lengths[1]
+    );
+    assert!(lines.contains(&want), "{lines:?}\n{want}");
+    // a damaged second file
+    let bytes = std::fs::read(dir.path("b.gqodb.tick")).unwrap();
+    std::fs::write(dir.path("b.gqodb.tick"), &bytes[..bytes.len() - 7]).unwrap();
+    let err = FileExecutor
+        .explain(&plan_of(&q), &Options::default())
+        .unwrap_err();
+    assert!(matches!(err, ExecError::File { .. }), "{err}");
+    let lines = FileExecutor
+        .explain(
+            &plan_of(&q),
+            &Options {
+                skip_bad: true,
+                ..Options::default()
+            },
+        )
+        .unwrap();
+    assert!(lines.contains(&want), "{lines:?}");
+    assert!(
+        lines
+            .iter()
+            .any(|l| l.starts_with("b.gqodb.tick: could not be read (")
+                && l.ends_with("); skipped with --skip-bad")),
+        "{lines:?}"
+    );
+}
+
+#[test]
+fn order_counts_and_reports_the_rows_that_have_no_value_on_its_clock() {
+    let dir = TempDir::new();
+    let mut r = rows(5);
+    r[1].source = None;
+    r[3].source = None;
+    write_trades(&dir.path("a.gqodb.tick"), &[r], None, 5, 2);
+    let q = format!(
+        "show trades EURUSD in {} | order on source | columns sequence",
+        dir.s()
+    );
+    let (out, report) = run(&q);
+    assert_eq!(
+        out.ints("sequence"),
+        [1, 3, 5, 2, 4],
+        "empty values come last"
+    );
+    assert_eq!(report.null_order_last, 2);
+    let (code, _, err) = stderr_of(&["--format", "csv", &q]);
+    assert_eq!(code, Some(0));
+    assert!(
+        err.contains("-- last: 2 rows without a source value\n"),
+        "{err}"
+    );
+    // one row is "1 row"
+    let mut r = rows(3);
+    r[0].source = None;
+    std::fs::remove_file(dir.path("a.gqodb.tick")).unwrap();
+    write_trades(&dir.path("a.gqodb.tick"), &[r], None, 5, 2);
+    let (_, _, err) = stderr_of(&["--format", "csv", &q]);
+    assert!(
+        err.contains("-- last: 1 row without a source value\n"),
+        "{err}"
+    );
+    // a clock without empty values reports nothing, and neither does a run without `order`
+    let (_, _, err) = stderr_of(&["--format", "csv", &q.replace("source", "available")]);
+    assert!(!err.contains("-- last:"), "{err}");
+}
+
+#[test]
+fn small_wordings_in_the_footer_and_the_messages() {
+    let dir = TempDir::new();
+    let mut r = rows(3);
+    r[0].source = None;
+    write_trades(&dir.path("a.gqodb.tick"), &[r], None, 5, 2);
+    let q = |range: &str| format!("show trades EURUSD {range} on source in {}", dir.s());
+    let (_, _, err) = stderr_of(&["--format", "csv", &q("..")]);
+    assert!(err.contains("-- clock source, range (open)\n"), "{err}");
+    assert!(
+        err.contains("-- excluded: 1 row without a source value\n"),
+        "{err}"
+    );
+    let (_, _, err) = stderr_of(&["--format", "csv", &q(&format!("{}..", at(1)))]);
+    assert!(err.contains(&format!("range [{}, ..)", at(1))), "{err}");
+    let (_, _, err) = stderr_of(&["--format", "csv", &q(&format!("..{}", at(2)))]);
+    assert!(err.contains(&format!("range [.., {})", at(2))), "{err}");
+    // `run` wants exactly one file
+    for args in [&["run"][..], &["run", "a", "b"][..]] {
+        let (code, out, err) = stderr_of(args);
+        assert_eq!(
+            (code, out.as_str(), err.as_str()),
+            (
+                Some(2),
+                "",
+                "error[E-SYNTAX]: `run` takes exactly one file\n"
+            ),
+            "{args:?}"
+        );
+    }
+    // --help is the general help, whatever follows it
+    let (code, out, _) = stderr_of(&["--help", "show", "trades", "A"]);
+    assert_eq!((code, out.as_str()), (Some(0), gqodb_cli::cli::HELP));
+    let (_, out, _) = stderr_of(&["--help"]);
+    assert_eq!(out, gqodb_cli::cli::HELP);
+}
+
+#[test]
+fn the_time_limits_are_named_exactly() {
+    let (code, _, err) = stderr_of(&["show trades A 1677-09-21..1677-09-22 on received in ./d"]);
+    assert_eq!(code, Some(2));
+    assert!(
+        err.contains("`1677-09-21` is outside the supported times 1677-09-21T00:12:43.145224192Z to 2262-04-11T23:47:16.854775807Z"),
+        "{err}"
+    );
+    assert_eq!(
+        gqodb_lang::time::format_instant(i64::MIN),
+        "1677-09-21T00:12:43.145224192Z"
+    );
+    assert_eq!(
+        gqodb_lang::time::format_instant(i64::MAX),
+        "2262-04-11T23:47:16.854775807Z"
+    );
+}
+
+#[test]
+fn the_general_help_names_the_topics_and_the_strict_exit_code() {
+    let help = gqodb_cli::cli::HELP;
+    assert!(
+        help.contains("help [clocks|ranges|steps|flags|errors]"),
+        "{help}"
+    );
+    assert!(
+        help.contains("--strict (a truncated result is an error, exit 3)"),
+        "{help}"
+    );
+}
+
+#[test]
+fn a_range_with_a_word_in_the_key_form_gets_a_useful_hint() {
+    let (code, _, err) = stderr_of(&["show stream=trades symbol=A range=x..y"]);
+    assert_eq!(code, Some(2));
+    assert!(
+        err.contains("help: a range starts with a date, a sequence number or `..`"),
+        "{err}"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn a_file_name_that_is_not_utf8_is_read_and_shown_lossily() {
+    use std::os::unix::ffi::OsStrExt;
+    let dir = TempDir::new();
+    write_trades(&dir.path("good.gqodb.tick"), &[rows(2)], None, 5, 2);
+    let odd = dir.0.join(std::ffi::OsStr::from_bytes(b"a\xfe.gqodb.tick"));
+    write_trades(&odd, &[rows(3)], None, 5, 2);
+    let (out, report) = run(&format!("show trades EURUSD in {}", dir.s()));
+    assert_eq!(out.rows.len(), 5, "both files are read");
+    assert_eq!(report.files_read, 2);
+}
+
+#[test]
+fn the_shell_word_splitter_of_these_tests_refuses_what_it_cannot_split() {
+    assert_eq!(shell_words("a 'b c' \"d\" e"), ["a", "b c", "d", "e"]);
+    for bad in [
+        "a 'b", "a \"b", "a | b", "a; b", "a & b", "a < b", "a > b", "a $b", "a `b`",
+    ] {
+        let r = std::panic::catch_unwind(|| shell_words(bad));
+        assert!(r.is_err(), "{bad:?} must not split quietly");
+    }
 }

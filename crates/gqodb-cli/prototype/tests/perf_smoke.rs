@@ -35,6 +35,8 @@ fn two_hundred_thousand_rows_in_fifty_blocks() {
         report.blocks_read,
         report.blocks_total
     );
+    assert_eq!(out.rows.len(), 4_000, "the rows of the range");
+    assert_eq!(report.blocks_total, 50, "the file holds fifty blocks");
     assert!(
         report.blocks_read <= 2,
         "the index must skip nearly every block"
@@ -60,6 +62,12 @@ fn two_hundred_thousand_rows_in_fifty_blocks() {
         report.blocks_read,
         report.blocks_total
     );
+    assert_eq!(
+        out.rows.len(),
+        4_000,
+        "the same rows, one nanosecond earlier"
+    );
+    assert_eq!(report.blocks_total, 50);
     assert_eq!(
         report.blocks_read, 50,
         "a clock that is not indexed reads every block with the symbol"
