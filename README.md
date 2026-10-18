@@ -8,8 +8,8 @@
 
 <img src="docs/assets/badge-status.svg" alt="status: prototype">
 <img src="docs/assets/badge-licence.svg" alt="licence: Apache-2.0">
-<img src="docs/assets/badge-tests.svg" alt="tests: 47 passed, 0 failed">
-<img src="docs/assets/badge-evidence.svg" alt="evidence: 18 receipted files">
+<img src="docs/assets/badge-tests.svg" alt="tests: 65 passed, 0 failed">
+<img src="docs/assets/badge-evidence.svg" alt="evidence: 23 receipted files">
 
 [Install](#build-it) · [Formats](#formats) · [Benchmarks](#benchmarks) ·
 [Evidence](#evidence) · [Crates](#crates) · [Licence](#licence-and-the-engine)
@@ -23,14 +23,16 @@ bytes as they arrived, the moment they arrived, and the evidence for the clock t
 measured it. This repository is the part of GQODB worth giving away — **the codec**:
 the exact types, the lossless tick and order-book compression, the indexed segment
 files, the format facade that reads them, and the benchmark protocols and evidence
-behind every number below.
+behind the numbers below.
 
 A codec is checkable in an afternoon, it is the part these benchmarks actually
 measure, and every file it writes is a plain `.gqodb` file you can inspect without us.
 
 > [!IMPORTANT]
-> **A prototype, released as source.** There is no crates.io release, no signed
-> artifact and no format-stability promise yet. The GQODB engine — raw journal,
+> **A prototype, released as source: 0.1.0 preview.** There is no crates.io release,
+> no signed artifact and no format-stability promise yet: APIs, command-line tools and
+> file formats may change in any 0.x release (see [API stability](docs/API_STABILITY.md)
+> for what is and is not promised). The GQODB engine — raw journal,
 > ledger and receipts, recovery, quality, features, causal query, ops and
 > connectors — is **not** in this repository and is not licensed by it.
 
@@ -41,8 +43,9 @@ measure, and every file it writes is a plain `.gqodb` file you can inspect witho
 #### Exact or it fails
 
 A price is an integer plus its scale. A round trip restores every value, null,
-timestamp and float bit exactly — or it returns an error. Nothing is rounded to fit a
-block, and a corrupt frame is refused rather than repaired.
+timestamp and float bit exactly — or it returns an error. Tested on the fixtures and
+column types in the suites and by 15 fuzz targets; not proven for every schema. Nothing
+is rounded to fit a block, and a corrupt frame is refused rather than repaired.
 
 `Functionally tested` — round trips, corrupt frames, truncated tails
 
@@ -60,13 +63,14 @@ neither its contents nor how it is read.
 </td>
 <td width="33%" valign="top">
 
-#### Every claim carries its receipt
+#### Receipts where they exist
 
 Each figure names its run, its dataset and its boundary — including the runs where
-Parquet wins. Eighteen result files are pinned by build receipts, and one script
-recomputes every published number from them.
+Parquet wins. Twenty-three result files are pinned by build receipts; one script checks
+every receipt and recomputes the B11, B15 and B17 summaries (B06 in part) from the stored
+results. B06 and B12 have no receipts and are marked as historical.
 
-`Hash checked` — 18 of 18 receipted files verify
+`Hash checked` — 23 of 23 receipted files verify
 
 </td>
 </tr>
@@ -86,20 +90,21 @@ recomputes every published number from them.
 
 <div align="center">
 
-| 4 | 47 | 18 | 0 |
+| 4 | 65 | 23 | 0 |
 |:---:|:---:|:---:|:---:|
-| crates | tests passed, 0 failed | receipted result files | published releases |
+| crates | tests passed, 0 failed, 1 ignored | receipted result files | published releases |
 
-<sub>Rust 1.96.0 · Linux x86_64 · 19 September 2026 · default build and `zstd-input` build both green</sub>
+<sub>Rust 1.96.0 · Linux x86_64 · 18 October 2026 · plus 7 doc-tests · default build and `zstd-input` build both green</sub>
 
 </div>
 
 > [!NOTE]
 > Read the numbers like an engineer, not a brochure. Benchmark figures are observations
-> from named runs on one host with warm caches. The raw inputs are not redistributed:
-> you can recompute every published figure from the stored results and check them
-> against their receipts, but re-running B11–B15 from scratch needs a Bybit capture of
-> your own.
+> from named runs on one host, mostly with warm caches (B17 also reports reads after
+> the files were evicted from the page cache). The raw inputs are not redistributed:
+> you can check the receipted result files against their receipts and recompute the
+> B11, B15 and B17 figures from the stored results, but re-running B11–B15 from scratch
+> needs a Bybit capture of your own.
 
 ## Build it
 
@@ -152,13 +157,32 @@ target/release/ob_store verify  /tmp/demo.gqodb.ob                  # verified 1
 target/release/ob_store recover /tmp/demo.gqodb.ob /tmp/recovered.gqodb.ob
 target/release/ob_store query   /tmp/demo.gqodb.ob SYNTH 10 12      # 3 rows
 
-# recompute every published figure and check it against its receipt
+# check every receipt and recompute the B11, B15 and B17 summaries
 python3 results/verify_public_evidence.py
 python3 benchmarks/verify_manifest.py
 ```
 
-The tested toolchain is Rust 1.96.0 on Linux. The default build is pure Rust. The
-original B06 trade samples were zstd-compressed Parquet; to read inputs like that, build
+> [!WARNING]
+> `ob_store verify`, `ob_store query` and `ob_store recover`, and the library calls behind
+> them (`Reader::read_all`, `visit_blocks`, `read_block`, `query`, `recover`), run on the
+> unchecked decoding layer. It has one open finding: a crafted block can make it request a
+> very large allocation (62.9 GB from a 60 KB block in the reproducer). Use these commands
+> on files you wrote yourself. For files from elsewhere use `gqodb-codec inspect` or
+> `validate`, or `Reader::read_block_bounded`; see [docs/FUZZING.md](docs/FUZZING.md).
+
+The `demo` and `recover` commands only create new files: if a target already exists
+they stop with `File exists`, so remove the files under `/tmp` (or use other names)
+before running the block again. The commands above were run in a clean checkout of this
+release branch on 2026-10-17 (Linux x86_64, Rust 1.96.0) and produced the output shown in
+their comments.
+
+Requirements for a manual build: Git, a C linker (`cc`), Rust and, for the two
+verification scripts, Python 3 (standard library only). The tested toolchain is Rust
+1.96.0 on Linux x86_64. The declared minimum, Rust 1.85, was built and tested on Linux
+on 2026-10-17 with the committed `Cargo.lock` and has a CI job; newer dependency
+versions are not covered. macOS and Windows are untried by the author (CI entries
+exist and are marked unverified). The default build is pure Rust. The original B06
+trade samples were zstd-compressed Parquet; to read inputs like that, build
 `gqodb-blocks` with `--features zstd-input`, which adds the native zstd library from
 crates.io. It only decodes inputs and is never one of the measured codecs.
 
@@ -183,19 +207,97 @@ The [benchmark inventory](benchmarks/README.md) and machine-readable
 protocols and stored evidence. CI fails if any declared benchmark file or any file
 under `results/` exists outside Git.
 
-Historical runs on fixed datasets and configurations, one host, warm caches. Every
-figure below is recomputed from the stored JSON by `results/verify_public_evidence.py`.
+Historical runs on fixed datasets and configurations, one host; B06 to B15 are warm-cache
+runs and B17 also reports page-cache-evicted reads. `results/verify_public_evidence.py`
+checks every receipted file against its receipt and recomputes the B11, B15 and B17
+summaries from the stored results (B06 in part). It does not recompute the B12 and B13
+figures (for example the B13 "2.4–3.5×" below).
 
 The [benchmark inventory](benchmarks/README.md) maps each run to its runner,
 protocol and input requirements. Use `./benchmarks/run.sh verify` to check the
 published evidence, or `./benchmarks/run.sh synthetic-smoke` from a clean committed
 checkout for a small synthetic check. Neither command downloads market data.
 
-### Trades — GQODB wins every axis (B06)
+### Trades — reproducible file-level result on public data (B17)
 
-> `results/b06` — 1,048,576 aggregate trades per sample (32 blocks), in-memory codec
-> passes, one warm-up and nine measured passes per mode, medians. GQODB is compared per
-> axis against the **strongest** of five Parquet configurations on that axis.
+> [`results/b17-public-trades-20261017`](results/b17-public-trades-20261017/ASSESSMENT.md) —
+> Binance aggregate trades of PAXGUSDT (spot, 2025-10 and 2026-02), the first 1,048,576 rows of each
+> month (D1, D2; 32 blocks of 32,768 rows) and both full months (3.1 and 3.7 million rows). Real files
+> written durably (all files and directories fsynced), read fully and by a 60-second time window, single
+> thread, one pinned core, fresh process per sample, 15 unflagged measured rounds after 3 warm-ups,
+> candidates alternated round by round, medians with a block-bootstrap 95% interval.
+> Protocol pre-registered and hash-pinned ([protocol](docs/B17_PUBLIC_TRADES_PROTOCOL.md); the
+> [addenda](docs/B17_PUBLIC_TRADES_ADDENDA.md) record every deviation, including A-004, an amendment of
+> the interference thresholds and the repeat budget made after a first start was aborted); every sample
+> is stored and the figures are recomputed from them by `results/verify_public_evidence.py`. Warm page
+> cache in the table (page-cache-evicted reads are in the assessment), one host, shared with a fuzzing
+> campaign on four other cores.
+
+**Two things to know before reading the table.** First, "15 unflagged measured rounds in every cell"
+rests on A-004: with the registered thresholds every cell would have been UNDERPOWERED, and with the
+amended thresholds but the registered repeat budget three cells (D1/v2, D2/v2, S1/v1) would have been
+(addendum A-004, items 5 and 6). Second, the receipt names commit `3323f73`, which is not in this
+repository's history, and reader fixes made after the measurement changed some measured code
+(addendum A-005); the figures were not re-measured.
+
+Baselines: four Parquet configurations written by the same Rust library, DuckDB 1.5.6 (native file and three
+Parquet writers) and ClickHouse 26.3 LTS (MergeTree, default and one pre-registered codec chain); every read
+returned the reference table bit for bit. Ratio is GQODB / strongest baseline on that axis (below 1 is better for
+GQODB); the verdict uses a 2% band for bytes, 5% for time and 10% for memory.
+
+| Slice | Axis | GQODB | Strongest baseline | Ratio [95% interval] | Verdict |
+| --- | --- | ---: | --- | ---: | --- |
+| D1 | Stored bytes | 6.51 MB | `duckdb-parquet-zstd`, 6.70 MB | 0.972 | better |
+| D1 | Durable write | 232.7 ms | `parquet-delta-bss-snappy`, 259.2 ms | 0.898 [0.89, 0.90] | better |
+| D1 | Full read, warm | 67.8 ms | `parquet-delta-bss-lz4`, 82.6 ms | 0.821 [0.82, 0.82] | better |
+| D1 | 60 s range read, warm | 3.3 ms | `parquet-delta-bss-lz4`, 4.2 ms | 0.791 [0.78, 0.80] | better |
+| D1 | Peak memory, write | 72.6 MiB | `duckdb-parquet-matched`, 17.0 MiB | 4.261 [4.21, 4.31] | **worse** |
+| D1 | Peak memory, full read | 68.2 MiB | `parquet-delta-bss-snappy`, 68.9 MiB | 0.990 [0.99, 0.99] | equivalent |
+| D2 | Stored bytes | 6.21 MB | `duckdb-parquet-zstd`, 7.63 MB | 0.814 | better |
+| D2 | Durable write | 231.5 ms | `parquet-delta-bss-snappy`, 255.7 ms | 0.905 [0.90, 0.92] | better |
+| D2 | Full read, warm | 66.7 ms | `parquet-delta-bss-lz4`, 79.1 ms | 0.843 [0.83, 0.85] | better |
+| D2 | 60 s range read, warm | 3.3 ms | `parquet-delta-bss-lz4`, 4.1 ms | 0.798 [0.79, 0.81] | better |
+| D2 | Peak memory, write | 72.5 MiB | `duckdb-parquet-matched`, 17.2 MiB | 4.203 [4.16, 4.26] | **worse** |
+| D2 | Peak memory, full read | 68.2 MiB | `parquet-delta-bss-snappy`, 68.9 MiB | 0.989 [0.99, 0.99] | equivalent |
+
+**GQODB does not win every axis, and the earlier headline "wins every axis" is withdrawn.** On this input it is the
+smallest layout and, with the exceptions below, the fastest on write, full read and the time-window read, but:
+the peak memory of the write is 2.2 to 4.3 times that of the DuckDB Parquet writers on the two slices (4.26 and 4.20 against
+the matched LZ4 writer in the table) and up to 5.0 times that of the DuckDB default Parquet writer on the full months (1.8 to
+2.1 times DuckDB native). That loss belongs to the measured adapter path and not to a property of the GQODB format: the Rust
+adapter reads the whole source table into memory before writing, for every Rust candidate including the Rust Parquet
+writers (which therefore sit at the same level), while DuckDB streams its input. Further: full-read memory on the full months
+is 2.5 to 3.0 times that of the ClickHouse engine process (not measured like for like); the warm range read against
+ClickHouse is inconclusive in 8 of 16 cells, none worse (for example 1.28 [0.32, 7.96] against `clickhouse-default` on D2 in V2; the window holds only 45 and 468 rows, and the ClickHouse
+operation time is wall time minus process start-up floored at zero: 76 of its 712 range-read samples record 0, so these
+ratios are noise in both directions); in V2 (prices as scaled integers) the write-time advantage over the Rust
+Parquet writers shrinks to equivalent or slightly worse (1.03 to 1.05 on D1), and the CPU time of the write is worse
+than `parquet-delta-bss-snappy` on D1 in V2 (1.07). The margins against the strongest Parquet
+configuration are 10 to 20% in time, not factors. The large factors in the full assessment are mostly against baselines
+in their default settings (for example ClickHouse default is 3.6 to 3.9 times larger) and, for ClickHouse full reads
+(0.22 to 0.29, also against the tuned chain), against its process model: one process per statement, the result handed
+to the client as Arrow IPC through a pipe. The end-to-end columns are not comparable for reads (they include digest
+code that differs per adapter); on the full months the end-to-end warm full read is worse than DuckDB (1.09 to 1.27)
+while the operation time is better. Every cell, loss and caveat is in the
+[assessment](results/b17-public-trades-20261017/ASSESSMENT.md).
+
+**Input data: Binance Vision ([data.binance.vision](https://data.binance.vision)).** The data are provided by Binance
+under CC BY-NC-SA 4.0 and the Binance Vision Dataset Terms (version 1.0, last updated 26 August 2026). This repository
+contains none of them; its result files are aggregates only (the frozen protocol and one synthetic fixture do quote a
+handful of per-trade values, and whether the aggregates fall under the share-alike clause is an open point: see the
+[licence notes](docs/BASELINE_LICENCES.md)). Fetch the data yourself (`./benchmarks/run.sh public-trades fetch`)
+and comply with those terms. Binance does not sponsor or endorse this project or these results.
+
+Rerun it: `./benchmarks/run.sh public-trades` (needs DuckDB and ClickHouse from
+`benchmarks/baselines/install_tools.py`; the timed matrix takes a few hours).
+
+<details>
+<summary><b>B06: the earlier in-memory codec comparison (historical, no receipts)</b></summary>
+
+> `results/b06` — 1,048,576 aggregate trades per sample (32 blocks), **in-memory codec
+> passes only**, one warm-up and nine measured passes per mode, medians. GQODB is compared per
+> axis against the **strongest** of five Parquet configurations on that axis. The input files no longer
+> exist and cannot be redistributed, so this run cannot be repeated; it is superseded by B17 above.
 
 | Sample | Axis | GQODB | Strongest Parquet | Difference |
 | --- | --- | ---: | --- | ---: |
@@ -206,8 +308,11 @@ checkout for a small synthetic check. Neither command downloads market data.
 | UNI | encode | **65.478 ms** | delta/BSS-LZ4, 142.945 ms | **−54.2%** |
 | UNI | decode | **21.277 ms** | delta/BSS-LZ4, 31.280 ms | **−32.0%** |
 
-B06 has no build receipts: these figures are historically measured, not hash-checked.
+B06 has no build receipts: these figures are historically measured, not hash-checked, and they
+describe the codec in memory, not files, a database or a query path.
 [Assessment](results/b06/ASSESSMENT.md).
+
+</details>
 
 ### Order books — a loss, and what changed
 
@@ -267,11 +372,12 @@ dictionary-LZ4 Parquet, at 14.3–14.5% longer decode than that Parquet baseline
 
 | Measurement | Status |
 | --- | --- |
-| Cold disk, full disk, datasets larger than one million rows | *not measured* — every figure above is warm-cache |
-| Instruments and venues beyond Bybit levels and Binance ETH/UNI trades | *not measured* |
-| kdb+ / q | *not measured* — no comparison has been run |
-| Rust versions below 1.96.0, Windows and macOS | *not measured* — the 1.85 minimum is declared, not qualified |
-| Adversarial fuzzing of the readers | *not done* |
+| Cold device, datasets larger than about 3.7 million rows | *not measured* — B17 evicts files from the page cache (cold-ish) but not from the device; the other runs are warm-cache |
+| Instruments and venues beyond Bybit levels, Binance ETH/UNI trades (B06) and Binance PAXGUSDT trades (B17) | *not measured* |
+| Multi-threaded, concurrent or networked use; other hosts | *not measured* — B17 is one thread on one host |
+| kdb+ / q | no comparison published |
+| Rust versions other than 1.85.0 and 1.96.0, Windows and macOS | *Linux only* — only 1.85.0 (the declared minimum) and 1.96.0 were built and tested, on Linux on 2026-10-17 with the committed `Cargo.lock`; no CI run exists yet; Windows and macOS *not run* |
+| Adversarial fuzzing of the readers | *partly done* — 15 libFuzzer targets (block, store, codec and Parquet readers, round trips), each at least 35 minutes (Parquet 2 x 60) on one machine with AddressSanitizer: 8 defects fixed, 1 open in the unchecked decoding layer, not exhaustive — see [docs/FUZZING.md](docs/FUZZING.md) |
 
 ## Evidence
 
@@ -287,7 +393,7 @@ Every claim above sits at one of five evidence levels, named where the claim is 
 
 ```console
 $ python3 results/verify_public_evidence.py > figures.json
-receipts: 18 checked, 0 mismatches, 0 stale redaction records
+receipts: 23 checked, 0 mismatches, 0 stale redaction records
 B15 vs dictionary-LZ4: bytes -37.7543%, write -36.6683%, read -3.9599%
 B11 book profile vs dictionary-LZ4: 38.4-42.9% smaller, decode 14.3-14.5% longer
 ```
@@ -301,6 +407,18 @@ pairs each redacted file's original hash with the hash of its public copy, and t
 verifier checks both. The unredacted originals stay in the private development
 repository. Recorded commit ids likewise refer to that private history.
 
+**A second, textual correction, stated too.** On 18 October 2026
+`results/b17-public-trades-20261017/ASSESSMENT.md` was reworded after it had been sealed:
+the description of a dropped optional baseline and of the concurrent fuzz job, the
+attribution of the write-memory loss to the adapter path, "864 comparisons" for "about
+1,000", the numbers and consequences of addendum A-004, and added notes on ClickHouse
+range-read noise and the secondary CPU-time loss. No measured value, sample, interval or
+verdict changed (`samples.json`, `summary.json`, `plan.json` and `inputs.json` are
+byte-identical to the receipted originals). The receipt keeps the original hash and
+`PUBLIC_REDACTION.json` lists the pair of hashes as for the first redaction. The
+B17 receipt names commit `3323f73`, which does not exist in this history; addendum A-005
+shows how the measured code maps to it.
+
 ## Crates
 
 **4 packages, and what each one cannot do.** Source and tests stay under each crate's
@@ -312,6 +430,19 @@ repository. Recorded commit ids likewise refer to that private history.
 | [gqodb-blocks](crates/gqodb-blocks/README.md) | Lossless codec kernels with adaptive column predictors, schema and null preservation, Parquet counter-tests | Codec kernels are not a database |
 | [gqodb-store](crates/gqodb-store/README.md) | Indexed `.gqodb.ob` segments, block index, range read, committed-prefix recovery | Not a catalog or retention product |
 | [gqodb-codec](crates/gqodb-codec/README.md) | Native facade with format and schema inspection; selects the tick or book profile from the header | Venue meaning stays with the caller |
+
+## Versioning and status
+
+This is **0.1.0, a preview**, released as source. The crates follow Cargo's 0.x
+convention (a breaking change bumps the minor version) and make no stability promise;
+[`docs/API_STABILITY.md`](docs/API_STABILITY.md) lists what is meant to be used, what is
+experimental and what the tests pin about the file formats. The crates are not published
+on crates.io (`publish = false`). To depend on them before then, use a Git dependency on
+an exact commit, for example
+`gqodb-codec = { git = "https://github.com/GerritsenQuantOffices/GQODB", rev = "<commit>" }`.
+See [`CHANGELOG.md`](CHANGELOG.md) and [`docs/RELEASE_NOTES_0.1.0.md`](docs/RELEASE_NOTES_0.1.0.md)
+for what is in the release and its limits, and [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md)
+for the dependency licences.
 
 ## Licence and the engine
 
@@ -331,7 +462,7 @@ and [SECURITY](SECURITY.md).
 <sub>
 
 The GQODB open layer · Apache-2.0 · Copyright 2026 Thomas Gerritsen / Gerritsen Quant Offices.
-Figures recomputed from the stored results under `results/` by `verify_public_evidence.py`.
+Receipts checked and B11, B15 and B17 summaries recomputed from the stored results under `results/` by `verify_public_evidence.py`.
 Technical status only — commercial claims are out of scope here.
 
 </sub>
