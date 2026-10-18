@@ -40,5 +40,9 @@ path = "prototype/tests/cli.rs"
 name = "hardening"
 path = "prototype/tests/hardening.rs"
 
+[[test]]
+name = "perf_smoke"
+path = "prototype/tests/perf_smoke.rs"
+
 [dev-dependencies]
 gqodb-blocks = { version = "0.1.0", path = "../gqodb-blocks" }

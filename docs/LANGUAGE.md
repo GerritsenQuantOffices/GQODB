@@ -374,6 +374,14 @@ Exit code 0 means the command ran and reported; it does not mean the result is c
 - Other limits: at most 10,000 files in one directory (E-BUDGET, exit code 1); a block is decoded
   only through the bounded read route of the store, with a size bound on what a block may expand to.
 
+**A measurement point, not a promise.** The ignored test `perf_smoke` writes 50 blocks of 4,000 rows
+of one symbol (200,000 rows) and then reads a window of 4,000 rows. On the indexed `available` clock
+the read took 8.2 ms and read 1 of 50 blocks (4,000 rows out). The same window on the `received`
+clock, which is not indexed, took 15.3 ms and read all 50 of 50 blocks (4,000 rows out). These are
+single runs on one Linux x86_64 machine, release build, 18 October 2026; times differ per machine and
+per run, and the block counts are the part the test asserts. Rerun it with
+`cargo test -p gqodb-cli --test perf_smoke --release -- --ignored --nocapture`.
+
 ## 9. Output, formats and exactness
 
 **Format.** `--format table|csv|json|ndjson`. The default is `table` when standard output is a
