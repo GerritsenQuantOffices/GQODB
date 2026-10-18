@@ -15,7 +15,7 @@ documentation = "https://docs.rs/gqodb-codec"
 [dependencies]
 anyhow = "1"
 arrow-array = "=59.3.0"
-arrow-schema = { version = "=59.3.0", features = ["serde"] }
+arrow-schema = { version = "=60.0.0", features = ["serde"] }
 bytes = "1"
 crc32fast = "1.5"
 gqodb-blocks = { version = "0.1.0", path = "../gqodb-blocks" }
