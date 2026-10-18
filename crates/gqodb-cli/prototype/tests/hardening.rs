@@ -237,3 +237,95 @@ fn explain_of_a_file_from_another_stream_says_why() {
         "{lines:?}"
     );
 }
+
+/// Runs `gqodb` with `args`, reads 16 bytes of stdout, closes it, and returns the output.
+#[cfg(unix)]
+fn run_and_close_after_16_bytes(args: &[String]) -> std::process::Output {
+    use std::io::Read;
+    let mut child = gqodb()
+        .args(args)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let mut first = [0_u8; 16];
+    child.stdout.take().unwrap().read_exact(&mut first).unwrap();
+    child.wait_with_output().unwrap()
+}
+
+#[cfg(unix)]
+#[test]
+fn a_closed_pipe_keeps_the_skip_bad_notice_and_exit_1() {
+    let dir = TempDir::new();
+    write_trades(&dir.path("a.gqodb.tick"), &[rows(4)], None, 5, 2);
+    let bytes = std::fs::read(dir.path("a.gqodb.tick")).unwrap();
+    std::fs::write(dir.path("a.gqodb.tick"), &bytes[..bytes.len() - 7]).unwrap(); // bad, met first
+    write_trades(&dir.path("b.gqodb.tick"), &[rows(20_000)], None, 5, 2);
+    let q = format!("show trades EURUSD in {}", dir.s());
+    let args = ["--skip-bad", "--max-rows", "20000", "--format", "csv", &q].map(String::from);
+    let output = run_and_close_after_16_bytes(&args);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(1), "{stderr}");
+    assert!(
+        stderr.contains("-- could not read a.gqodb.tick"),
+        "{stderr}"
+    );
+    assert!(!stderr.contains("error["), "{stderr}");
+}
+
+#[cfg(unix)]
+#[test]
+fn a_closed_pipe_ends_the_whole_script() {
+    let dir = TempDir::new();
+    write_trades(&dir.path("a.gqodb.tick"), &[rows(20_000)], None, 5, 2);
+    let script = dir.path("s.gq");
+    std::fs::write(
+        &script,
+        format!(
+            "show trades EURUSD in {}\nshow trades EURUSD in /no/such/dir\n",
+            dir.s()
+        ),
+    )
+    .unwrap();
+    let args = [
+        "--max-rows",
+        "20000",
+        "--format",
+        "csv",
+        "run",
+        &script.to_string_lossy(),
+    ]
+    .map(String::from);
+    let output = run_and_close_after_16_bytes(&args);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(0), "{stderr}");
+    assert_eq!(stderr, "", "later commands must not run");
+}
+
+#[cfg(unix)]
+#[test]
+fn a_closed_pipe_ends_the_repl() {
+    use std::io::{Read, Write};
+    let dir = TempDir::new();
+    write_trades(&dir.path("a.gqodb.tick"), &[rows(20_000)], None, 5, 2);
+    let mut child = gqodb()
+        .args(["--max-rows", "20000", "--format", "csv"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let mut stdin = child.stdin.take().unwrap();
+    let _ = write!(
+        stdin,
+        "show trades EURUSD in {}\nshow trades EURUSD in /no/such/dir\n",
+        dir.s()
+    );
+    drop(stdin);
+    let mut first = [0_u8; 16];
+    child.stdout.take().unwrap().read_exact(&mut first).unwrap();
+    let output = child.wait_with_output().unwrap();
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(0), "{stderr}");
+    assert_eq!(stderr, "", "later lines must not run");
+}

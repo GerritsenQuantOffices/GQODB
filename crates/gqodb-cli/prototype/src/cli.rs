@@ -184,7 +184,7 @@ fn footer(err: &mut dyn Write, plan: &gqodb_lang::Plan, r: &Report, opts: &Optio
 
 fn exec_error(err: &mut dyn Write, e: &ExecError) {
     let code = match e {
-        ExecError::Closed => return,
+        ExecError::Closed(_) => return,
         ExecError::Path(_) => "E-PATH",
         ExecError::File { .. } | ExecError::Output(_) => "E-FILE",
         ExecError::Budget(_) => "E-BUDGET",
@@ -200,19 +200,19 @@ fn run_show(
     tty: bool,
     out: &mut dyn Write,
     err: &mut dyn Write,
-) -> u8 {
+) -> (u8, bool) {
     let p = match plan(cmd, session) {
         Ok(p) => p,
         Err(diags) => {
             for d in diags {
                 let _ = write!(err, "{}", d.render(src));
             }
-            return 2;
+            return (2, false);
         }
     };
     if let Err(m) = flags.opts.validate() {
         let _ = writeln!(err, "error[E-BUDGET]: {m}");
-        return 2;
+        return (2, false);
     }
     let exec = FileExecutor;
     if p.explain {
@@ -221,11 +221,11 @@ fn run_show(
                 for l in lines {
                     let _ = writeln!(out, "{l}");
                 }
-                0
+                (0, false)
             }
             Err(e) => {
                 exec_error(err, &e);
-                1
+                (1, false)
             }
         };
     }
@@ -246,7 +246,7 @@ fn run_show(
                 };
                 if let Err(e) = w.flush() {
                     let _ = writeln!(err, "error[E-FILE]: cannot write `{path}`: {e}");
-                    return 1;
+                    return (1, false);
                 }
                 r
             }
@@ -255,7 +255,7 @@ fn run_show(
                     err,
                     "error[E-FILE]: cannot create `{path}` (an existing file is never overwritten): {e}"
                 );
-                return 1;
+                return (1, false);
             }
         },
         None => {
@@ -264,20 +264,26 @@ fn run_show(
         }
     };
     match result {
-        Err(ExecError::Closed) => 0,
+        Err(ExecError::Closed(bad_files)) => {
+            for (file, why) in &bad_files {
+                let _ = writeln!(err, "-- could not read {file}: {why}");
+            }
+            (u8::from(!bad_files.is_empty()), true)
+        }
         Err(e) => {
             exec_error(err, &e);
-            1
+            (1, false)
         }
         Ok(report) => {
             footer(err, &p, &report, &flags.opts);
-            if flags.opts.strict && report.truncated.is_some() {
+            let code = if flags.opts.strict && report.truncated.is_some() {
                 3
             } else if !report.bad_files.is_empty() {
                 1
             } else {
                 0
-            }
+            };
+            (code, false)
         }
     }
 }
@@ -290,6 +296,19 @@ pub fn run_text(
     tty: bool,
     out: &mut dyn Write,
     err: &mut dyn Write,
+) -> u8 {
+    run_commands(src, session, flags, tty, out, err, &mut false)
+}
+
+/// Like `run_text`; sets `closed_out` when the reader of `out` went away, which ends the whole run.
+fn run_commands(
+    src: &str,
+    session: &mut Session,
+    flags: &Flags,
+    tty: bool,
+    out: &mut dyn Write,
+    err: &mut dyn Write,
+    closed_out: &mut bool,
 ) -> u8 {
     if src.len() > MAX_COMMAND_BYTES {
         let _ = writeln!(
@@ -332,8 +351,9 @@ pub fn run_text(
             },
             Command::Quit => return 0,
             Command::Show(_) | Command::Explain(_) => {
-                let code = run_show(cmd, src, session, flags, tty, out, err);
-                if code != 0 {
+                let (code, closed) = run_show(cmd, src, session, flags, tty, out, err);
+                if code != 0 || closed {
+                    *closed_out = closed;
                     return code;
                 }
             }
@@ -368,7 +388,11 @@ fn repl(
         if text.eq_ignore_ascii_case("quit") || text.eq_ignore_ascii_case("exit") {
             break;
         }
-        let code = run_text(&line, &mut session, flags, tty_out, out, err);
+        let mut closed = false;
+        let code = run_commands(&line, &mut session, flags, tty_out, out, err, &mut closed);
+        if closed {
+            return code;
+        }
         if code != 0 && !tty_in {
             return code;
         }

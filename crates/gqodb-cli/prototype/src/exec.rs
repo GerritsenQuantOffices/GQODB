@@ -116,12 +116,13 @@ pub enum ExecError {
     Budget(String),
     Output(String),
     /// The reader of our output went away (for example `| head`). Not an error to report.
-    Closed,
+    /// Carries the `--skip-bad` notices collected so far, which are still reported.
+    Closed(Vec<(String, String)>),
 }
 
 fn out_err(e: std::io::Error) -> ExecError {
     if e.kind() == std::io::ErrorKind::BrokenPipe {
-        ExecError::Closed
+        ExecError::Closed(Vec::new())
     } else {
         ExecError::Output(e.to_string())
     }
@@ -132,7 +133,7 @@ impl fmt::Display for ExecError {
         match self {
             ExecError::Path(m) | ExecError::Budget(m) | ExecError::Output(m) => f.write_str(m),
             ExecError::File { path, reason } => write!(f, "{path}: {reason}"),
-            ExecError::Closed => f.write_str("output closed"),
+            ExecError::Closed(_) => f.write_str("output closed"),
         }
     }
 }
@@ -450,6 +451,59 @@ fn render_row(
         .collect()
 }
 
+fn drive(
+    plan: &Plan,
+    opts: &Options,
+    files: &[PathBuf],
+    st: &mut State,
+    sink: &mut dyn Sink,
+) -> Result<(), ExecError> {
+    for path in files {
+        if st.stop {
+            break;
+        }
+        match open_for(path, plan) {
+            Ok(Ok(opened)) => read_file(path, opened, st, sink)?,
+            Ok(Err(reason)) => st.report.skipped.push((name_of(path), reason)),
+            Err(e) if opts.skip_bad => st.report.bad_files.push((name_of(path), e.to_string())),
+            Err(e) => return Err(e),
+        }
+    }
+    if let Some(order) = plan.order {
+        let mut rows = std::mem::take(&mut st.ordered);
+        rows.sort_by(|a, b| match (a.0, b.0) {
+            (Some(x), Some(y)) => {
+                if order.desc {
+                    y.cmp(&x)
+                } else {
+                    x.cmp(&y)
+                }
+            }
+            (Some(_), None) => std::cmp::Ordering::Less,
+            (None, Some(_)) => std::cmp::Ordering::Greater,
+            (None, None) => std::cmp::Ordering::Equal,
+        });
+        st.stop = false;
+        for (_, cells) in rows {
+            st.offer(cells, sink)?;
+            if st.stop {
+                break;
+            }
+        }
+    }
+    if st.header.is_none() {
+        let columns = plan.columns.clone().unwrap_or_else(|| {
+            gqodb_lang::plan::known_columns(plan.stream)
+                .iter()
+                .map(|c| (*c).to_string())
+                .collect()
+        });
+        begin(st, sink, columns)?;
+    }
+    sink.finish().map_err(out_err)?;
+    Ok(())
+}
+
 impl Executor for FileExecutor {
     fn execute(
         &self,
@@ -468,50 +522,11 @@ impl Executor for FileExecutor {
             stop: false,
             ordered: Vec::new(),
         };
-        for path in &files {
-            if st.stop {
-                break;
-            }
-            match open_for(path, plan) {
-                Ok(Ok(opened)) => read_file(path, opened, &mut st, sink)?,
-                Ok(Err(reason)) => st.report.skipped.push((name_of(path), reason)),
-                Err(e) if opts.skip_bad => st.report.bad_files.push((name_of(path), e.to_string())),
-                Err(e) => return Err(e),
-            }
+        match drive(plan, opts, &files, &mut st, sink) {
+            Ok(()) => Ok(st.report),
+            Err(ExecError::Closed(_)) => Err(ExecError::Closed(st.report.bad_files)),
+            Err(e) => Err(e),
         }
-        if let Some(order) = plan.order {
-            let mut rows = std::mem::take(&mut st.ordered);
-            rows.sort_by(|a, b| match (a.0, b.0) {
-                (Some(x), Some(y)) => {
-                    if order.desc {
-                        y.cmp(&x)
-                    } else {
-                        x.cmp(&y)
-                    }
-                }
-                (Some(_), None) => std::cmp::Ordering::Less,
-                (None, Some(_)) => std::cmp::Ordering::Greater,
-                (None, None) => std::cmp::Ordering::Equal,
-            });
-            st.stop = false;
-            for (_, cells) in rows {
-                st.offer(cells, sink)?;
-                if st.stop {
-                    break;
-                }
-            }
-        }
-        if st.header.is_none() {
-            let columns = plan.columns.clone().unwrap_or_else(|| {
-                gqodb_lang::plan::known_columns(plan.stream)
-                    .iter()
-                    .map(|c| (*c).to_string())
-                    .collect()
-            });
-            begin(&mut st, sink, columns)?;
-        }
-        sink.finish().map_err(out_err)?;
-        Ok(st.report)
     }
 
     fn explain(&self, plan: &Plan, opts: &Options) -> Result<Vec<String>, ExecError> {
