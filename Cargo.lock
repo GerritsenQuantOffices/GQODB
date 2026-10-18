@@ -420,6 +420,7 @@ dependencies = [
  "anyhow",
  "arrow-array",
  "arrow-schema",
+ "gqodb-blocks",
  "gqodb-codec",
  "gqodb-lang",
  "gqodb-store",

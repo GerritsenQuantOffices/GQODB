@@ -109,9 +109,22 @@ pub struct Report {
 #[derive(Debug)]
 pub enum ExecError {
     Path(String),
-    File { path: String, reason: String },
+    File {
+        path: String,
+        reason: String,
+    },
     Budget(String),
     Output(String),
+    /// The reader of our output went away (for example `| head`). Not an error to report.
+    Closed,
+}
+
+fn out_err(e: std::io::Error) -> ExecError {
+    if e.kind() == std::io::ErrorKind::BrokenPipe {
+        ExecError::Closed
+    } else {
+        ExecError::Output(e.to_string())
+    }
 }
 
 impl fmt::Display for ExecError {
@@ -119,6 +132,7 @@ impl fmt::Display for ExecError {
         match self {
             ExecError::Path(m) | ExecError::Budget(m) | ExecError::Output(m) => f.write_str(m),
             ExecError::File { path, reason } => write!(f, "{path}: {reason}"),
+            ExecError::Closed => f.write_str("output closed"),
         }
     }
 }
@@ -290,8 +304,7 @@ impl State<'_> {
             self.stop = true;
             return Ok(());
         }
-        sink.row(&cells)
-            .map_err(|e| ExecError::Output(e.to_string()))?;
+        sink.row(&cells).map_err(out_err)?;
         self.emitted += 1;
         self.report.rows_out += 1;
         Ok(())
@@ -300,8 +313,7 @@ impl State<'_> {
 
 fn begin(st: &mut State, sink: &mut dyn Sink, columns: Vec<String>) -> Result<(), ExecError> {
     if st.header.is_none() {
-        sink.begin(&columns)
-            .map_err(|e| ExecError::Output(e.to_string()))?;
+        sink.begin(&columns).map_err(out_err)?;
         st.report.columns.clone_from(&columns);
         st.header = Some(columns);
     }
@@ -498,8 +510,7 @@ impl Executor for FileExecutor {
             });
             begin(&mut st, sink, columns)?;
         }
-        sink.finish()
-            .map_err(|e| ExecError::Output(e.to_string()))?;
+        sink.finish().map_err(out_err)?;
         Ok(st.report)
     }
 

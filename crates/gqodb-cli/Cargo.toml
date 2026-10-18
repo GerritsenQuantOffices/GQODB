@@ -35,3 +35,10 @@ path = "prototype/tests/exec.rs"
 [[test]]
 name = "cli"
 path = "prototype/tests/cli.rs"
+
+[[test]]
+name = "hardening"
+path = "prototype/tests/hardening.rs"
+
+[dev-dependencies]
+gqodb-blocks = { version = "0.1.0", path = "../gqodb-blocks" }

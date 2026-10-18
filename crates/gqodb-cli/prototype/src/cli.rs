@@ -184,6 +184,7 @@ fn footer(err: &mut dyn Write, plan: &gqodb_lang::Plan, r: &Report, opts: &Optio
 
 fn exec_error(err: &mut dyn Write, e: &ExecError) {
     let code = match e {
+        ExecError::Closed => return,
         ExecError::Path(_) => "E-PATH",
         ExecError::File { .. } | ExecError::Output(_) => "E-FILE",
         ExecError::Budget(_) => "E-BUDGET",
@@ -263,6 +264,7 @@ fn run_show(
         }
     };
     match result {
+        Err(ExecError::Closed) => 0,
         Err(e) => {
             exec_error(err, &e);
             1
@@ -310,9 +312,24 @@ pub fn run_text(
             Command::UseClock(_) | Command::UsePath(_) => {
                 session.apply(&cmd.node);
             }
-            Command::Help(_) => {
-                let _ = write!(out, "{HELP}");
-            }
+            Command::Help(topic) => match topic.as_deref() {
+                None => {
+                    let _ = write!(out, "{HELP}");
+                }
+                Some(name) => match crate::help::topic(name) {
+                    Some(text) => {
+                        let _ = write!(out, "{text}");
+                    }
+                    None => {
+                        let _ = writeln!(
+                            err,
+                            "error[E-SYNTAX]: no help for `{name}`; topics: {}",
+                            crate::help::TOPICS.join(", ")
+                        );
+                        return 2;
+                    }
+                },
+            },
             Command::Quit => return 0,
             Command::Show(_) | Command::Explain(_) => {
                 let code = run_show(cmd, src, session, flags, tty, out, err);

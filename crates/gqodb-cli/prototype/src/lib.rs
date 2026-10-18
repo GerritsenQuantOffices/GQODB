@@ -4,6 +4,7 @@
 
 pub mod cli;
 pub mod exec;
+pub mod help;
 pub mod select;
 pub mod sink;
 pub mod value;
