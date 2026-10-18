@@ -329,3 +329,25 @@ fn a_closed_pipe_ends_the_repl() {
     assert_eq!(output.status.code(), Some(0), "{stderr}");
     assert_eq!(stderr, "", "later lines must not run");
 }
+
+#[test]
+fn every_command_in_the_language_reference_parses() {
+    let doc = std::fs::read_to_string(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../docs/LANGUAGE.md"
+    ))
+    .unwrap();
+    let mut checked = 0;
+    for line in doc
+        .lines()
+        .filter_map(|l| l.trim_start().strip_prefix("$ gqodb "))
+    {
+        let command = line.trim().trim_matches('"');
+        gqodb_lang::parse(command).unwrap_or_else(|e| panic!("{command}: {e:?}"));
+        checked += 1;
+    }
+    assert!(
+        checked >= 8,
+        "LANGUAGE.md shows at least eight example commands (lines that start with `$ gqodb `)"
+    );
+}
