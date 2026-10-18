@@ -182,8 +182,8 @@ Requirements for a manual build: Git, a C linker (`cc`), Rust and, for the two
 verification scripts, Python 3 (standard library only). The tested toolchain is Rust
 1.96.0 on Linux x86_64. The declared minimum, Rust 1.85, was built and tested on Linux
 on 2026-10-18 with the committed `Cargo.lock` and has a CI job; newer dependency
-versions are not covered. The 76 tests and 7 doc-tests also passed once on macOS (Apple silicon, Rust 1.98.1, 2026-10-18, no CI);
-Windows not run (CI entries for both exist and are marked unverified). The default build is pure Rust. The original B06
+versions are not covered. The tests also pass on macOS (GitHub Actions on 2026-10-18, and locally on Apple silicon with Rust 1.98.1);
+the Windows CI entry fails, see "Still not measured". The default build is pure Rust. The original B06
 trade samples were zstd-compressed Parquet; to read inputs like that, build
 `gqodb-blocks` with `--features zstd-input`, which adds the native zstd library from
 crates.io. It only decodes inputs and is never one of the measured codecs.
@@ -421,7 +421,7 @@ dictionary-LZ4 Parquet, at 14.3–14.5% longer decode than that Parquet baseline
 | Instruments and venues beyond Bybit levels, Binance ETH/UNI trades (B06) and Binance PAXGUSDT trades (B17) | *not measured* |
 | Multi-threaded, concurrent or networked use; other hosts | *not measured* — B17 is one thread on one host |
 | kdb+ / q | no comparison published |
-| Rust versions other than 1.85.0 and 1.96.0, Windows, any CI run | *Linux, plus one macOS run* — only 1.85.0 (the declared minimum) and 1.96.0 were built and tested, on Linux on 2026-10-18 with the committed `Cargo.lock`; the 76 tests and 7 doc-tests also passed once on macOS (Apple silicon, Rust 1.98.1, 2026-10-18, no CI); Windows not run; no CI run exists yet |
+| Rust versions other than 1.85.0 and 1.96.0, Windows | *Linux and macOS pass in CI, Windows fails* — only 1.85.0 (the declared minimum) and 1.96.0 were built and tested on Linux with the committed `Cargo.lock`; the first GitHub Actions run (18 October 2026, commit `d632932`): the `test` (Rust 1.96.0, Linux), `msrv` (1.85.0) and `deny` jobs passed and so did the macOS build-and-test entry; the Windows entry **failed** in the benchmark example test `fsync_tree_handles_files_and_directories` (opening a directory to fsync it gives `Access is denied` on Windows), the job stops there, so Windows is not supported yet; the 76 tests and 7 doc-tests also passed locally on macOS (Apple silicon, Rust 1.98.1, 2026-10-18); other Rust versions *not tested* |
 | Adversarial fuzzing of the readers | *partly done* — 15 libFuzzer targets (block, store, codec and Parquet readers, round trips), each at least 35 minutes (Parquet 2 x 60) on one machine with AddressSanitizer: 9 defects fixed (8 found by fuzzing, 1 by reading the code), 0 open; after the last fix (a 128 MiB limit on decoded string bytes in the unchecked decoding layer) the 10 targets that reach that code were re-run for about 11 minutes each without findings. Not exhaustive, and the unchecked layer is not audited — see [docs/FUZZING.md](docs/FUZZING.md) |
 
 ## Evidence

@@ -40,8 +40,8 @@ unsigned); not published to crates.io (see [docs/RELEASING.md](docs/RELEASING.md
 - CI: minimum-supported-Rust job (1.85), doc-tests, rustdoc with warnings denied,
   `cargo deny` (licences, advisories, sources), a check that the per-crate licence files
   match the repository's, a check that `THIRD_PARTY_LICENSES.md` is current, and
-  macOS and Windows build-and-test entries marked `continue-on-error` (unverified until
-  the first CI run). The third-party actions of the main CI workflow (`rust.yml`) are pinned by
+  macOS and Windows build-and-test entries marked `continue-on-error` (first run on
+  2026-10-18: macOS passed, Windows failed in one benchmark example test, see Known limitations). The third-party actions of the main CI workflow (`rust.yml`) are pinned by
   commit SHA; the nightly `fuzz.yml` is not pinned yet. Dependabot is configured weekly for
   Cargo and GitHub Actions.
 - B17: a file-level trades benchmark on public Binance Vision data against Parquet, DuckDB and
@@ -106,8 +106,10 @@ No file format or valid-input encoder output changed.
   not capped there). Use the checked entry points (`gqodb-codec`, `Reader::read_block_bounded`) for
   untrusted files. See [docs/FUZZING.md](docs/FUZZING.md).
 - `real::encode` now refuses a batch whose decoded string bytes would exceed 128 MiB (see Fixed).
-- Only Rust 1.85.0 and 1.96.0 were tested, on Linux, and no CI run exists yet; macOS and
-  Windows builds are untested by the author.
+- Only Rust 1.85.0 and 1.96.0 were tested, on Linux. In the first GitHub CI run (2026-10-18) the Linux,
+  MSRV, `cargo deny` and macOS jobs passed; the Windows job failed in the benchmark example test
+  `fsync_tree_handles_files_and_directories` (opening a directory to fsync it gives `Access is denied`)
+  and stops there, so Windows is not supported yet.
 - Directory sync and physical power-loss behaviour of segment files are not qualified.
 - Crates are not published to crates.io; `Cargo.toml` keeps `publish = false`.
 - Some crate READMEs under `crates/` are partly in Dutch.

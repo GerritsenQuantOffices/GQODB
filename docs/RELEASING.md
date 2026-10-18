@@ -165,8 +165,8 @@ gh release create v0.1.0 \
 - GitHub repository settings: private vulnerability reporting is on (`SECURITY.md` depends
   on it), the repository description and topics say "preview", branch protection requires
   the `test`, `msrv` and `deny` jobs.
-- The first CI run of the macOS and Windows entries: record the result in the changelog
-  or the README "Still not measured" row before you claim anything about those platforms.
+- The first CI run of the macOS and Windows entries (2026-10-18): macOS passed, Windows failed in one
+  benchmark example test; recorded in the changelog and the README "Still not measured" row.
 - crates.io (if used): the pages show the right README, licence, repository and keywords,
   and docs.rs built all four crates.
 - No private information in the release notes, the archive or the crate packages

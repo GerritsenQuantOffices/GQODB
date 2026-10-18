@@ -150,7 +150,7 @@ From the README, "Still not measured":
 | Instruments and venues beyond Bybit levels, Binance ETH/UNI trades (B06) and Binance PAXGUSDT trades (B17) | not measured |
 | Multi-threaded, concurrent or networked use; other hosts | not measured |
 | kdb+ / q | no comparison published |
-| Rust versions other than 1.85.0 and 1.96.0, Windows, any CI run | only 1.85.0 and 1.96.0 were built and tested, on Linux; the 76 tests and 7 doc-tests also passed once on macOS (Apple silicon, Rust 1.98.1, 2026-10-18, no CI); Windows not run; no CI run exists yet |
+| Rust versions other than 1.85.0 and 1.96.0, Windows | only 1.85.0 and 1.96.0 were built and tested on Linux; the first GitHub Actions run (18 October 2026, commit `d632932`): the `test` (Rust 1.96.0, Linux), `msrv` (1.85.0) and `deny` jobs passed and so did the macOS build-and-test entry; the Windows entry **failed** in the benchmark example test `fsync_tree_handles_files_and_directories` (opening a directory to fsync it gives `Access is denied` on Windows), the job stops there, so Windows is not supported yet; the 76 tests and 7 doc-tests also passed locally on macOS (Apple silicon, Rust 1.98.1, 2026-10-18) |
 | Adversarial fuzzing of the readers | partly done: 15 libFuzzer targets, 9 defects fixed (8 found by fuzzing, 1 by reading the code), none open; the unchecked decoding layer remains unaudited (the 128 MiB limit on decoded string bytes closes one class, not all); see `docs/FUZZING.md` |
 
 Also not done: crates.io publication, a signed tag or artifact, a format-stability
@@ -194,8 +194,9 @@ published; it does not say who the publisher is. There is no signature on the ar
   declared-size checks and validation rejected the malformed and truncated inputs used in the
   test suites and by 15 fuzz targets of limited duration (`docs/FUZZING.md`); this is not a
   security-audit result.
-- macOS and Windows have not been run by the author, and no CI run exists yet; the macOS and
-  Windows CI entries are marked `continue-on-error` until a first CI run exists.
+- macOS passes in GitHub CI; Windows does not: the benchmark example test
+  `fsync_tree_handles_files_and_directories` fails there (directory fsync is not supported), and the
+  Windows CI entry is marked `continue-on-error`.
 - Some crate READMEs under `crates/` are partly in Dutch.
 - B06 has no build receipts; B12 is historically measured only. The B13, B15 and B17
   receipts name private-development commit IDs that do not exist in this repository; for
