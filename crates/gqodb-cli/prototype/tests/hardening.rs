@@ -1372,7 +1372,8 @@ fn a_range_with_a_word_in_the_key_form_gets_a_useful_hint() {
     );
 }
 
-#[cfg(unix)]
+// macOS file systems reject file names that are not valid UTF-8, so this test cannot create its file there.
+#[cfg(all(unix, target_os = "linux"))]
 #[test]
 fn a_file_name_that_is_not_utf8_is_read_and_shown_lossily() {
     use std::os::unix::ffi::OsStrExt;
