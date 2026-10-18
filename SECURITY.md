@@ -8,13 +8,18 @@ not put secrets, account identifiers or proprietary payloads into issues.
 Include the affected version or commit, crate, input shape, reproduction steps and observed
 impact. Use synthetic data whenever possible.
 
-The codecs and readers in this repository parse untrusted bytes, and one finding is
-open. The unchecked decoding layer (`real::decode`, `Reader::read_block`, `read_all`,
-`visit_blocks`, `query`, `profile_read_all`, `recover`, and therefore the `ob_store
-verify`, `query` and `recover` commands) can be made to request a very large allocation
-by a crafted block, while `gqodb-codec` (including its `inspect` and `validate` commands)
-and `Reader::read_block_bounded` refuse the same bytes. Treat files from untrusted
-sources with the checked entry points only.
+The codecs and readers in this repository parse untrusted bytes. The unchecked decoding
+layer (`real::decode`, `Reader::read_block`, `read_all`, `visit_blocks`, `query`,
+`profile_read_all`, `recover`, and therefore the `ob_store verify`, `query` and `recover`
+commands) is not audited. One class of problem in it was found by fuzzing and is fixed: a
+crafted block could request `rows x longest string` bytes for a string column (62.9 GB from a
+60 KB block). That layer now refuses a block whose decoded strings exceed 128 MiB, before it
+allocates them (`real::MAX_DECODED_STRING_BYTES`; `docs/FUZZING.md`, finding 9). The limit
+closes that class, not all of them: it covers string bytes only, so a 16 KB block with
+1,048,576 rows of 64 integer columns still decodes there to roughly 0.5 GiB (measured peak
+529 MB). `gqodb-codec` (including its `inspect` and `validate` commands) and
+`Reader::read_block_bounded` check a total expansion estimate of 128 MiB first and refuse
+both blocks. Treat files from untrusted sources with the checked entry points only.
 
 Frame checksums, declared-size checks and validation rejected the malformed and truncated
 inputs used in the test suites and by fifteen libFuzzer targets of limited duration (see

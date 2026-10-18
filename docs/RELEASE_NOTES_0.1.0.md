@@ -143,7 +143,7 @@ From the README, "Still not measured":
 | Multi-threaded, concurrent or networked use; other hosts | not measured |
 | kdb+ / q | no comparison published |
 | Rust versions other than 1.85.0 and 1.96.0, Windows and macOS | only 1.85.0 and 1.96.0 were built and tested, on Linux; no CI run exists yet; Windows and macOS not run |
-| Adversarial fuzzing of the readers | partly done: 15 libFuzzer targets, 8 defects fixed, one open finding in the unchecked decoding layer; see `docs/FUZZING.md` |
+| Adversarial fuzzing of the readers | partly done: 15 libFuzzer targets, 9 defects fixed, none open; the unchecked decoding layer remains unaudited (the 128 MiB limit on decoded string bytes closes one class, not all); see `docs/FUZZING.md` |
 
 Also not done: crates.io publication, a signed tag or artifact, a format-stability
 promise, directory-sync and power-loss qualification of segment files.
@@ -175,11 +175,14 @@ published; it does not say who the publisher is. There is no signature on the ar
   `docs/API_STABILITY.md`. Breaking changes are possible in any 0.x release.
 - Much of `gqodb-blocks` is benchmark and feasibility code, not a database.
 - Exact `arrow`/`parquet` version pins (`=59.3.0`) are inherited by dependent crates.
-- The readers parse untrusted bytes, and one finding is open: the unchecked decoding layer
-  (`real::decode`, `Reader::read_block`, `read_all`, `visit_blocks`, `query`, `recover`, and
-  therefore the `ob_store verify`, `query` and `recover` commands) can be made to request a
-  very large allocation by a crafted block. `gqodb-codec` (including `inspect` and
-  `validate`) and `Reader::read_block_bounded` refuse the same bytes. Frame checksums,
+- The readers parse untrusted bytes. The unchecked decoding layer (`real::decode`,
+  `Reader::read_block`, `read_all`, `visit_blocks`, `query`, `recover`, and therefore the
+  `ob_store verify`, `query` and `recover` commands) is not audited. The one fuzzing finding in it
+  (a crafted 60 KB block requesting 62.9 GB for a string column) is fixed by a 128 MiB limit on
+  decoded string bytes, which also makes `real::encode` refuse a batch above that limit. The limit
+  closes that class, not all: the numeric columns of a block are not capped there (a 16 KB block can
+  decode to about 0.5 GiB). `gqodb-codec` (including `inspect` and `validate`) and
+  `Reader::read_block_bounded` check a total expansion estimate of 128 MiB first. Frame checksums,
   declared-size checks and validation rejected the malformed and truncated inputs used in the
   test suites and by 15 fuzz targets of limited duration (`docs/FUZZING.md`); this is not a
   security-audit result.

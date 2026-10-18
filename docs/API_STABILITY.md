@@ -20,7 +20,7 @@ subject to change.
 | Crate | Entry points | What the tests pin |
 | --- | --- | --- |
 | `gqodb-types` | `BookEvent`, `Envelope`, `Level`, `DepthCoverage`; `timing::{ClockReading, ClockState, AssessedTime, EventTiming, SourceTime}` | Exact integer fields; clock-evidence assessment rules (7 tests); validated timing types have no `Deserialize` on purpose |
-| `gqodb-blocks` | `real::{encode, decode, equal, Decoder, Mode}` (the lossless Arrow round trip), `batch::Options` | Exact round trip of schema, metadata, values, nulls and float bits; corrupt and truncated input fails |
+| `gqodb-blocks` | `real::{encode, decode, equal, Decoder, Mode, MAX_DECODED_STRING_BYTES}` (the lossless Arrow round trip), `batch::Options` | Exact round trip of schema, metadata, values, nulls and float bits; corrupt and truncated input fails; decoded string bytes above 128 MiB are refused by decode and by encode |
 | `gqodb-store` | `Writer`, `Reader` (`open`, `read_all`, `query`, `recover`), the `ob_store` binary | Round trip, range queries including late rows, every truncation point of a fixture, corruption is not mistaken for a crash tail, no overwrite |
 | `gqodb-codec` | `detect`, `encode`, `decode`, `inspect`, `validate_schema`, `write_block`, `write_segment`, the `gqodb-codec` binary | The header, not the file extension, selects the codec; unknown or mismatched families are refused; size bounds are checked before decoding |
 
@@ -67,8 +67,19 @@ compatibility promise between releases, and no migration tool.
   dimensions are checked before decoding, so that oversized declared sizes and
   dictionary-expansion bombs are rejected first. The unchecked layer (`real::decode`,
   `Reader::read_block`, `read_all`, `visit_blocks`, `query`, `recover`, and the `ob_store verify|query|recover`
-  commands that call them) has one known open finding of this kind (docs/FUZZING.md). Tested for the cases in the test suites and by 15 fuzz targets of
-  limited duration; neither is a security audit.
+  commands that call them) refuses a block whose decoded strings exceed 128 MiB
+  (`real::MAX_DECODED_STRING_BYTES`, the same 128 MiB as the codec facade and the store) before it
+  allocates them; that closes the one class found by fuzzing (docs/FUZZING.md, finding 9) and is
+  not a bound on everything: the numeric columns of a block are not capped there (a 16 KB block can
+  decode to about 0.5 GiB), and the layer remains unaudited. Tested for the cases in the test suites
+  and by 15 fuzz targets of limited duration; neither is a security audit.
+- **The encoder refuses what the decoder would refuse.** `real::encode` (and so
+  `Writer::append`, `gqodb_codec::encode` and `batch::Options::encode`) returns an error for a batch
+  whose decoded string bytes (over all `LargeUtf8` columns, null rows counting as empty) would
+  exceed 128 MiB, so that everything the encoder writes can be decoded again. This is the one
+  behaviour change of the limit: encoder output for batches under the limit is byte-identical to
+  before, and no file layout changed. The plain Parquet modes of `real` do not go through this
+  check.
 
 Not promised: that files written by 0.1.0 can be read by 0.2.0, that a newer reader
 accepts older files, byte-for-byte reproducibility of the encoder output across

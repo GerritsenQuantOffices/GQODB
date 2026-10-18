@@ -165,9 +165,11 @@ python3 benchmarks/verify_manifest.py
 > [!WARNING]
 > `ob_store verify`, `ob_store query` and `ob_store recover`, and the library calls behind
 > them (`Reader::read_all`, `visit_blocks`, `read_block`, `query`, `recover`), run on the
-> unchecked decoding layer. It has one open finding: a crafted block can make it request a
-> very large allocation (62.9 GB from a 60 KB block in the reproducer). Use these commands
-> on files you wrote yourself. For files from elsewhere use `gqodb-codec inspect` or
+> unchecked decoding layer, which is not audited. A fuzzing finding in it is fixed: a crafted
+> block could make it request a very large allocation (62.9 GB from a 60 KB block); it now
+> refuses blocks whose decoded strings exceed 128 MiB. That closes one class, not all: for
+> example a 16 KB block can still decode there to about 0.5 GiB of integer columns. Use these
+> commands on files you wrote yourself. For files from elsewhere use `gqodb-codec inspect` or
 > `validate`, or `Reader::read_block_bounded`; see [docs/FUZZING.md](docs/FUZZING.md).
 
 The `demo` and `recover` commands only create new files: if a target already exists
@@ -377,7 +379,7 @@ dictionary-LZ4 Parquet, at 14.3–14.5% longer decode than that Parquet baseline
 | Multi-threaded, concurrent or networked use; other hosts | *not measured* — B17 is one thread on one host |
 | kdb+ / q | no comparison published |
 | Rust versions other than 1.85.0 and 1.96.0, Windows and macOS | *Linux only* — only 1.85.0 (the declared minimum) and 1.96.0 were built and tested, on Linux on 2026-10-17 with the committed `Cargo.lock`; no CI run exists yet; Windows and macOS *not run* |
-| Adversarial fuzzing of the readers | *partly done* — 15 libFuzzer targets (block, store, codec and Parquet readers, round trips), each at least 35 minutes (Parquet 2 x 60) on one machine with AddressSanitizer: 8 defects fixed, 1 open in the unchecked decoding layer, not exhaustive — see [docs/FUZZING.md](docs/FUZZING.md) |
+| Adversarial fuzzing of the readers | *partly done* — 15 libFuzzer targets (block, store, codec and Parquet readers, round trips), each at least 35 minutes (Parquet 2 x 60) on one machine with AddressSanitizer: 9 defects fixed, 0 open; after the last fix (a 128 MiB limit on decoded string bytes in the unchecked decoding layer) the 10 targets that reach that code were re-run for about 11 minutes each without findings. Not exhaustive, and the unchecked layer is not audited — see [docs/FUZZING.md](docs/FUZZING.md) |
 
 ## Evidence
 

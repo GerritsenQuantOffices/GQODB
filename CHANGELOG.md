@@ -34,6 +34,7 @@ released" with the release date when the tag is created.
   documentation, repository, licence, `rust-version`, versioned path dependencies).
   Packaging was checked with `cargo publish --workspace --dry-run` in a scratch copy;
   `publish = false` remains in the repository.
+- `gqodb_blocks::real::MAX_DECODED_STRING_BYTES` (128 MiB), the limit above.
 - Crate-level documentation and seven tested doc examples (`gqodb-types` 2,
   `gqodb-blocks` 2, `gqodb-store` 1, `gqodb-codec` 2). `cargo doc` builds without warnings.
 - `docs/API_STABILITY.md`, `docs/RELEASE_NOTES_0.1.0.md`, `docs/RELEASING.md`.
@@ -73,6 +74,17 @@ No file format or valid-input encoder output changed.
   now guarded by a budgeted walk. Upstream issues have not been reported.
 - Parquet encoder: duplicate column names that need different encodings now return an error
   instead of panicking.
+- Unchecked decoding layer (`real::decode`, `Decoder::decode`, `batch::Options::decode`,
+  `Reader::read_block`, `read_all`, `visit_blocks`, `query`, `profile_read_all`, `recover`, and the
+  `ob_store verify|query|recover` commands): a crafted block of about 60 KB could request
+  `rows x longest dictionary string` = 62,914,560,000 bytes for a string column and abort the
+  process. Decoding now refuses a block whose decoded string bytes (dictionary entry length over
+  the valid rows, summed over all string columns) exceed 128 MiB, before allocating them.
+  `real::encode` applies the same limit, so a batch above it is now an error (also from
+  `Writer::append` and `gqodb_codec::encode`); encoder output below the limit is byte-identical
+  and no file layout changed. Regression tests in `crates/gqodb-blocks`, `gqodb-store` and
+  `gqodb-codec`, and stored reproducers (`tests/regressions/string_bomb_60kb.bin`,
+  `string_bomb_segment.gqodb.ob`).
 
 ### Known limitations
 
@@ -82,10 +94,13 @@ No file format or valid-input encoder output changed.
   page-cache-evicted reads. See the README for what has not been measured (a cold device,
   datasets above about 3.7 million rows, other venues, multi-threaded use, other platforms).
 - Adversarial fuzzing of the readers is partial (15 libFuzzer targets, at least 35 minutes each on one
-  machine, not exhaustive) and one finding is open: the unchecked decoding layer
-  (`real::decode`, `Reader::read_block`, `read_all`, `visit_blocks`, `query`, `recover`, and the
-  `ob_store verify|query|recover` commands that call them) allocates
-  `rows x longest dictionary string` before any bound. See [docs/FUZZING.md](docs/FUZZING.md).
+  machine, not exhaustive); nine defects found, nine fixed, none open. The unchecked decoding
+  layer (`real::decode`, `Reader::read_block`, `read_all`, `visit_blocks`, `query`, `recover`, and
+  the `ob_store verify|query|recover` commands that call them) remains unaudited: the 128 MiB limit
+  on decoded string bytes closes one class, not all (for example, the numeric columns of a block are
+  not capped there). Use the checked entry points (`gqodb-codec`, `Reader::read_block_bounded`) for
+  untrusted files. See [docs/FUZZING.md](docs/FUZZING.md).
+- `real::encode` now refuses a batch whose decoded string bytes would exceed 128 MiB (see Fixed).
 - Only Rust 1.85.0 and 1.96.0 were tested, on Linux, and no CI run exists yet; macOS and
   Windows builds are untested by the author.
 - Directory sync and physical power-loss behaviour of segment files are not qualified.
