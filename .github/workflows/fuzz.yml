@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 75
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install nightly toolchain (cargo-fuzz needs sanitizer flags)
         run: rustup toolchain install nightly --profile minimal
       - name: Install pinned cargo-fuzz
