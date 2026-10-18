@@ -43,7 +43,9 @@ sequence,price,quantity
 The rows go to standard output; the three lines that start with `--` are the footer and go to standard
 error. The command selected the rows of `SYNTH` whose sequence number is in the half-open range `[1, 3)`,
 read the directory `./demo`, skipped the order-book file because it holds another stream, and said
-what it scanned. The examples on this page show what a pipe or a file receives (CSV); on a terminal
+what it scanned. Lines that start with `$ ` are commands to type, written so that the test of this page can parse them;
+command lines that carry flags, or that cannot parse, are shown without the `$ `. The examples on this page
+show what a pipe or a file receives (CSV); on a terminal
 the default format is an aligned table (section 9).
 
 Three rules shape the whole language:
@@ -76,8 +78,10 @@ gqodb                                            # commands from the terminal, o
 A single argument is one whole command line. Among several arguments, one that holds whitespace is
 treated as quoted. `gqodb run <file>` and a command line may hold several commands separated by a
 newline or `;`; `#` starts a comment to the end of the line. A script is parsed completely before
-anything runs, and every syntax error in it is reported at once (exit code 2). After that the
-commands run in order and the run stops at the first one that fails, with that command's exit code.
+anything runs. The parse reports the first error of each command, so one script shows all its broken
+lines at once, except that a lexical error (an unclosed quote) stops the parse and is the only one
+reported; the exit code is 2 and nothing runs. After that the commands run in order and the run stops
+at the first one that fails, with that command's exit code.
 `use clock` and `use path` last until the end of the run; they are not kept between runs. A script
 file, or one command line given to the binary, may not be longer than 1 MiB (1,048,576 bytes).
 
@@ -119,7 +123,7 @@ Lexical rules, as the code applies them:
   A word that holds one of those characters must be quoted.
 - **Quoted text.** `'...'` or `"..."`. There are no escape sequences, and the text must close on
   the same line. A quoted name cannot be empty.
-- **Symbol and venue.** A bare name starts with a letter and holds letters, digits and `. _ : / -`,
+- **Symbol and venue.** A bare name starts with an ASCII letter and holds ASCII letters, digits and `. _ : / -`,
   never `..`. Anything else (a leading digit, `+`, a space) must be quoted: `'1INCHUSDT'`,
   `"EUR/USD"`. A bare name that contains characters outside that set is an E-SYNTAX error that says so.
 - **Venue position.** A bare word that follows the symbol and starts with a letter is the venue,
@@ -137,7 +141,7 @@ Lexical rules, as the code applies them:
   once; `stream=` and `symbol=` are required. The first word after `show` decides the form: a word followed
   by `=` starts the keyword form.
 
-The keyword-form rule for ranges, as the executor shows it (not a parsable command, so no `$ `):
+The keyword-form rule for ranges, as the executor shows it (this command does not parse):
 
 ```text
 gqodb "show stream=trades symbol=SYNTH range=x..y clock=sequence path=./demo"
@@ -179,9 +183,14 @@ sequence
 | `quotes` | `gqodb.family` = `tick` and `gqodb.subtype` = `quote` | `symbol`, `source_utc_ns`, `received_utc_ns`, `clock_error_ns`, `available_utc_ns`, `sequence`, `bid`, `ask`, `bid_quantity`, `ask_quantity` |
 | `book` | `gqodb.family` = `orderbook` | `symbol`, `source_utc_ns`, `received_utc_ns`, `clock_error_ns`, `available_utc_ns`, `sequence`, `price`, `quantity`, `level`, `side`, `action` |
 
-The stream of a file is decided by that schema metadata, not by the file name or the extension.
-A file that has no such metadata is skipped as "not a normalized tick or book file"; a file of another
+The stream of a file is decided by that schema metadata, not by its name. A file that has no such metadata is skipped as "not a normalized tick or book file"; a file of another
 stream is skipped as "other stream". Both are counted and named in the footer.
+
+**Paths.** `in <path>` (or `use path`) names a file or a directory. A file path is read whatever its
+name is. A directory means its direct children whose names end in `.gqodb.tick` or `.gqodb.ob`, sorted
+by name; it is not searched recursively. Other files and subdirectories are ignored, and they are not
+named in the footer or in `explain` (only the files that qualify by name are counted). A command with
+no path at all is E-PATH.
 
 What the columns hold:
 
@@ -240,7 +249,7 @@ sequence,source_utc_ns
 **Indexed or not.** A segment file has one index column for time. Only on that column can a block be
 skipped from its minimum and maximum. Which column it is, is decided per file from its header; the
 table above is what files written through the codec facade have. The executor skips blocks only when
-the chosen clock is the file's index column and that column has no empty values. On any other clock it
+the chosen clock is the file's index column and that column cannot be empty (it is declared non-nullable in the file's schema). On any other clock it
 reads every block that holds the symbol, which uses the scan budget faster. `explain` shows this
 before anything is read:
 
@@ -280,8 +289,10 @@ On the time clocks (`available`, `received`, `source`) a bound is a UTC time:
 
 The form is strict: four-digit year, two-digit month, day, hour, minute and second, an upper-case `T` and
 `Z`. A time zone other than `Z` is an error (E-RANGE, "not a UTC time"), as is an impossible date or
-time (30 February, hour 24). Times are whole nanoseconds in a signed 64-bit number, so only the years
-1677 to 2262 are accepted.
+time (30 February, hour 24). Times are whole nanoseconds in a signed 64-bit number, so only instants from
+1677-09-21T00:12:43.145224192Z to 2262-04-11T23:47:16.854775807Z can be written: 1677-09-22 and
+2262-04-11 are accepted, 1677-09-21 and 2262-04-12 are refused. (The error text for a refused date says
+"outside the supported years 1677 to 2262".)
 
 On the `sequence` clock a bound is a whole number (digits only, no sign) that fits a signed 64-bit
 number, for example `100..200`. A date there, or a number on a time clock that is not a date, is E-RANGE.
@@ -427,8 +438,10 @@ untouched. The footer and every error go to standard error.
 the file name and the reason (exit code 1). The error comes at the point of failure: the table is not
 written at all, but `csv`, `json` and `ndjson` may already have written the rows of the files before it
 (a `json` array is then left unclosed). Files
-are never repaired. With `--skip-bad` an unreadable file or block is skipped, named in the footer
-(`-- could not read ...`), the other files are read, and the exit code is 1 instead of 0. Without the
+are never repaired. With `--skip-bad` an unreadable file is skipped, and a block that does not decode ends the reading
+of that file (the rows of its earlier blocks stay in the output); either is named in the footer
+(`-- could not read ...`), the other files are read, and the exit code is 1 instead of 0. Other
+failures still end the run with E-FILE (section 13). Without the
 flag, a damaged file is never skipped silently.
 
 **A closed output pipe.** If the reader of standard output goes away (`gqodb ... | head`), the whole run
@@ -470,14 +483,16 @@ The **exit codes** of the `gqodb` binary:
 | Code | Meaning |
 | --- | --- |
 | 0 | The command ran. Also when the result was truncated (it says so), and after a closed output pipe. |
-| 1 | It could not read or write: a data file, a path, the `--out` file; also when `--skip-bad` skipped a file. |
+| 1 | It could not read or write: a data file, a path, the `--out` file; also when `--skip-bad` skipped a file (files skipped for another stream or venue do not count). |
 | 2 | The command or its flags are wrong: nothing was read. |
 | 3 | The result was truncated and `--strict` was given. |
 
-If a result is both truncated under `--strict` and has skipped files, the code is 3. In a script,
-the code is that of the first command that failed. Parse errors are reported for the whole script
-before anything runs; errors found while planning a command (a missing clock, an unknown column, a
-missing path) appear when the run reaches that command.
+If a result is both truncated under `--strict` and has files skipped by `--skip-bad`, the code is 3. In a script,
+the code is that of the first command that failed. Parse errors (the first error of each command, or
+the one lexical error) are reported for the whole script before anything runs. Other errors appear
+when the run reaches the command, after the earlier commands have run and written their output: those
+found while planning it (a missing clock, an unknown column, a missing path, a step given twice, which is
+an E-SYNTAX error) and an unknown help topic (also E-SYNTAX).
 
 ## 11. Reserved words (engine)
 
@@ -485,9 +500,7 @@ missing path) appear when the run reaches that command.
 
 These words belong to the GQODB engine, which is not part of this repository. This repository contains
 no implementation of them. The parser recognises them so that a command written for the engine fails
-here with a clear message instead of a syntax error. (This command does not parse, which is the point,
-so it is written without the `$ ` prompt: the test that parses every `$ gqodb` line of this page
-leaves it out.)
+here with a clear message instead of a syntax error. This command does not parse, which is the point:
 
 ```text
 gqodb "show trades SYNTH as of 2026-03-05 in ./demo"
@@ -501,6 +514,10 @@ The error is given when a reserved word stands as the first word of a command, i
 as a step name (`| join ...`), or at another place where the grammar does not expect a word. Written as a
 symbol, or inside quotes, a reserved word is plain text: `show trades as in ./d` reads the symbol
 `as`. The grammar is the same with or without the engine.
+
+E-ENGINE is not given everywhere. A reserved word in the stream position (`show quality SYNTH ...`) is
+E-STREAM, and after `use`, as a help topic or as a name in the keyword form (`show join=1 ...`) it is
+E-SYNTAX.
 
 ## 12. Venue
 
@@ -553,6 +570,8 @@ are known flaws, not design. They are expected to be fixed, and this list change
   Decimals and ISO times are strings and are exact. CSV is exact.
 - **`explain` ignores `--skip-bad`.** One unreadable file makes `explain` fail with E-FILE, while the
   `show` would have skipped it. Its byte count is an upper bound over all blocks with the symbol.
+- **Files that do not qualify by name are ignored silently.** In a directory, a file whose name does
+  not end in `.gqodb.tick` or `.gqodb.ob`, and every subdirectory, is not listed or counted anywhere.
 - **An outside or broken symbolic link is dropped silently.** A symbolic link in a directory is followed
   only when its target is a file inside that directory; any other link is left out of the file list
   and is not named in the footer or in `explain`.
@@ -561,10 +580,11 @@ are known flaws, not design. They are expected to be fixed, and this list change
   lower than the number of blocks the directory holds.
 - **Files of one stream with different columns stop the run.** If a later file has other columns than
   the first file that was read (no `columns` step given), the run ends with E-FILE, also with
-  `--skip-bad`. (Found by reading the code; not reproduced with a test file.)
-- **A closed output pipe is noticed only by `show`.** `explain` and `help` ignore write errors, so in a
-  script `explain ...; show ...` followed by a failing command can still print that error and exit 1
-  after the pipe is gone.
+  `--skip-bad`. The same holds when a file has a column of the wrong type, or lacks a column named in
+  a `columns` step. (Found by reading the code; not reproduced with a test file.)
+- **A closed output pipe is noticed only by `show`.** `explain` and `help` ignore write errors, so a pipe
+  that closes while they write is not noticed. A following command that fails before it writes (for
+  example `explain ...; show ... in ./missing`) still prints its error and exits 1.
 - **`help` does not list the topics.** The general usage text does not mention `help <topic>`; the
   five topics are `clocks`, `ranges`, `steps`, `flags` and `errors`.
 - **The hint of E-RANGE for a keyword range is misleading.** `range=x..y` is refused because it does not

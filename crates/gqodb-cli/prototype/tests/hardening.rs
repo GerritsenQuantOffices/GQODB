@@ -351,3 +351,77 @@ fn every_command_in_the_language_reference_parses() {
         "LANGUAGE.md shows at least eight example commands (lines that start with `$ gqodb `)"
     );
 }
+
+/// The demo files the language reference uses: what `gqodb-codec demo tick-segment` and `demo book-segment` write.
+fn demo_dir() -> TempDir {
+    use gqodb_codec::{Family, fixture, write_segment, write_segment_with_family};
+    let dir = TempDir::new();
+    std::fs::create_dir(dir.path("demo")).unwrap();
+    write_segment_with_family(
+        &dir.path("demo/demo.gqodb.tick"),
+        &[fixture(Family::Tick).unwrap()],
+        Family::Tick,
+    )
+    .unwrap();
+    write_segment(
+        &dir.path("demo/demo.gqodb.ob"),
+        &[fixture(Family::Orderbook).unwrap()],
+    )
+    .unwrap();
+    dir
+}
+
+#[test]
+fn every_output_block_in_the_language_reference_is_what_the_command_prints() {
+    let doc = std::fs::read_to_string(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../docs/LANGUAGE.md"
+    ))
+    .unwrap();
+    let dir = demo_dir();
+    let lines: Vec<&str> = doc.lines().collect();
+    let mut compared = 0;
+    for (i, line) in lines.iter().enumerate() {
+        let Some(rest) = line.trim_start().strip_prefix("$ gqodb ") else {
+            continue;
+        };
+        let command = rest.trim().trim_matches('"');
+        let expected: Vec<&str> = lines[i + 1..]
+            .iter()
+            .take_while(|l| !l.starts_with("```") && !l.trim_start().starts_with("$ gqodb "))
+            .copied()
+            .collect();
+        // Commands without a block are only parsed (the other test); those on `./data` have no data here.
+        if expected.is_empty() || command.contains("./data") {
+            continue;
+        }
+        let output = gqodb()
+            .current_dir(&dir.0)
+            .arg(command)
+            .stdin(Stdio::null())
+            .output()
+            .unwrap();
+        let got = format!(
+            "{}{}",
+            String::from_utf8(output.stdout).unwrap(),
+            String::from_utf8(output.stderr).unwrap()
+        );
+        assert_eq!(
+            got.trim_end(),
+            expected.join("\n").trim_end(),
+            "LANGUAGE.md line {}: {command}",
+            i + 1
+        );
+        let failed = got.starts_with("error[");
+        assert_eq!(
+            output.status.code(),
+            Some(if failed { 2 } else { 0 }),
+            "{command}"
+        );
+        compared += 1;
+    }
+    assert!(
+        compared >= 9,
+        "LANGUAGE.md has at least nine runnable example blocks, found {compared}"
+    );
+}

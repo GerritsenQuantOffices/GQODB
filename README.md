@@ -198,7 +198,7 @@ crates.io. It only decodes inputs and is never one of the measured codecs.
 
 The `gqodb` command asks `.gqodb.tick` and `.gqodb.ob` files what they hold, with a small command
 language (`gqodb-lang`, run by `gqodb-cli`). The two commands below were run with binaries built from this
-branch on 2026-10-18 (Linux x86_64, Rust 1.96.0) on the demo files of `gqodb-codec`, three synthetic rows
+repository on 2026-10-18 (Linux x86_64, Rust 1.96.0) on the demo files of `gqodb-codec`, three synthetic rows
 stamped a few nanoseconds after 1970-01-01, and printed what is shown:
 
 ```sh

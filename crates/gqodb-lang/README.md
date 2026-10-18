@@ -35,7 +35,7 @@ print!("{}", diagnostics[0].render(src));
 //   help: add one of: on available | on received | on source | on sequence
 ```
 
-- `parse(&str)` returns a `Script` or every syntax error of the text, each with its place.
+- `parse(&str)` returns a `Script`, or the first error of each command with its place; a lexical error (an unclosed quote) stops the parse and is the only one returned.
 - `plan(&command, &Session)` resolves clocks, the range (UTC nanoseconds, or sequence numbers) and the
   path into a `Plan`. `Session` holds what `use clock` and `use path` set.
 - `to_canonical` prints a parsed script back to canonical text.
