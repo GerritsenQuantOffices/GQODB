@@ -14,7 +14,7 @@ usage() {
 Usage: ./install.sh [--prefix DIR] [--ref GIT_REF] [--force]
 
 Downloads a clean source checkout, runs the locked workspace tests, builds the
-release binaries and installs gqodb-codec and ob_store under DIR/bin.
+release binaries and installs gqodb-codec, ob_store and gqodb under DIR/bin.
 
 Defaults:
   --prefix "$HOME/.local"
@@ -75,7 +75,7 @@ done
 
 bin_dir=$prefix/bin
 share_dir=$prefix/share/gqodb
-for binary in gqodb-codec ob_store; do
+for binary in gqodb-codec ob_store gqodb; do
     destination=$bin_dir/$binary
     if { [ -e "$destination" ] || [ -L "$destination" ]; } && [ "$force" -ne 1 ]; then
         printf 'refusing to replace %s; rerun with --force if intended\n' "$destination" >&2
@@ -182,7 +182,7 @@ printf 'Testing release profile for commit %s with Rust %s\n' "$commit" "$toolch
 
 bin_dir=$prefix/bin
 share_dir=$prefix/share/gqodb
-for binary in gqodb-codec ob_store; do
+for binary in gqodb-codec ob_store gqodb; do
     destination=$bin_dir/$binary
     if { [ -e "$destination" ] || [ -L "$destination" ]; } && [ "$force" -ne 1 ]; then
         printf 'refusing to replace %s; rerun with --force if intended\n' "$destination" >&2
@@ -191,7 +191,7 @@ for binary in gqodb-codec ob_store; do
 done
 
 install -d "$bin_dir" "$share_dir"
-for binary in gqodb-codec ob_store; do
+for binary in gqodb-codec ob_store gqodb; do
     install -m 0755 "$source_dir/target/release/$binary" "$bin_dir/$binary"
 done
 install -m 0644 "$source_dir/LICENSE" "$source_dir/NOTICE" "$share_dir/"
@@ -203,7 +203,7 @@ receipt=$share_dir/install-receipt.txt
     printf 'commit=%s\n' "$commit"
     printf 'rustc=%s\n' "$(run_rust rustc --version)"
     printf 'cargo=%s\n' "$(run_rust cargo --version)"
-    sha256sum "$bin_dir/gqodb-codec" "$bin_dir/ob_store"
+    sha256sum "$bin_dir/gqodb-codec" "$bin_dir/ob_store" "$bin_dir/gqodb"
 } > "$receipt"
 chmod 0644 "$receipt"
 

@@ -125,7 +125,7 @@ Rustup for your user. An existing matching active Rust toolchain is reused.
 Answering `n`, pressing Enter or reaching end-of-input stops that installation;
 `--force` only controls replacing GQODB binaries and does not approve prerequisites.
 Other Linux distributions need their system packages installed manually first.
-It installs `gqodb-codec` and `ob_store`, their licence files and a build receipt.
+It installs `gqodb-codec`, `ob_store` and `gqodb`, their licence files and a build receipt.
 Existing binaries are refused unless `--force` is supplied. Use `--ref COMMIT`
 to select an exact source revision; `./install.sh --help` lists the options.
 This is a source installer, not a signed binary release.

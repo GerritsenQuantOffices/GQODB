@@ -135,6 +135,15 @@ if [ "$1" = install ]; then /bin/ln -s "$TEST_ROOT/git-stub" "$TEST_ROOT/bin/git
         self.assertEqual(trace, "")
         self.assertEqual(destination.read_text(), "keep this")
 
+    def test_existing_gqodb_binary_is_refused_before_any_prerequisite_action(self):
+        destination = self.root / "prefix/bin/gqodb"
+        destination.parent.mkdir(parents=True)
+        destination.write_text("keep this")
+        result, trace = self.run_installer("y\ny\n")
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(trace, "")
+        self.assertEqual(destination.read_text(), "keep this")
+
 
 if __name__ == "__main__":
     unittest.main()
