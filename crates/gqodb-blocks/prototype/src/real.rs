@@ -7,7 +7,7 @@ use arrow_array::{
 use arrow_schema::{DataType, Field, Schema, TimeUnit};
 use bytes::Bytes;
 use parquet::{
-    arrow::{ArrowWriter, arrow_reader::ParquetRecordBatchReaderBuilder},
+    arrow::ArrowWriter,
     basic::{BrotliLevel, Compression, Encoding},
     file::metadata::KeyValue,
     file::properties::{EnabledStatistics, WriterProperties, WriterVersion},
@@ -324,6 +324,10 @@ fn parquet_encode(batch: &RecordBatch, mode: Mode) -> Result<Vec<u8>> {
         .set_dictionary_enabled(matches!(mode, Mode::ParquetDictionaryLz4))
         .set_compression(compression)
         .set_key_value_metadata((!metadata.is_empty()).then_some(metadata));
+    // Encodings are keyed by column NAME. Arrow allows duplicate names, and a later column's
+    // encoding would silently replace an earlier one's (e.g. DELTA_BINARY_PACKED applied to a
+    // Float64 column makes the parquet crate panic). Refuse that instead.
+    let mut chosen: HashMap<&str, Encoding> = HashMap::new();
     for field in batch.schema().fields() {
         let encoding = match field.data_type() {
             DataType::Int64 | DataType::Int8 | DataType::Timestamp(TimeUnit::Millisecond, _) => {
@@ -333,6 +337,13 @@ fn parquet_encode(batch: &RecordBatch, mode: Mode) -> Result<Vec<u8>> {
             DataType::LargeUtf8 => Encoding::DELTA_BYTE_ARRAY,
             _ => Encoding::PLAIN,
         };
+        ensure!(
+            chosen
+                .insert(field.name(), encoding)
+                .is_none_or(|e| e == encoding),
+            "duplicate column name {:?} needs different Parquet encodings",
+            field.name()
+        );
         props = props.set_column_encoding(field.name().as_str().into(), encoding);
     }
     let mut out = Vec::new();
@@ -428,7 +439,7 @@ fn decode_with_scratch(input: Bytes, mode: Mode, scratch: &mut Vec<u8>) -> Resul
             "real block magic"
         );
         let n = u32::from_le_bytes(input[8..12].try_into().unwrap()) as usize;
-        ensure!(n <= end - 12, "bad schema length");
+        ensure!(end >= 12 && n <= end - 12, "bad schema length");
         let layout = serde_json::from_slice(&input[12..12 + n])?;
         let values = if book {
             crate::book::decode(&input[12 + n..end], scratch)?
@@ -440,7 +451,7 @@ fn decode_with_scratch(input: Bytes, mode: Mode, scratch: &mut Vec<u8>) -> Resul
         };
         restore(layout, values)
     } else {
-        let builder = ParquetRecordBatchReaderBuilder::try_new(input.slice(..end))?;
+        let builder = crate::parquet::open(input.slice(..end))?;
         let n = builder.metadata().file_metadata().num_rows();
         ensure!(
             n > 0 && n <= crate::data::MAX_ROWS as i64,
@@ -467,13 +478,13 @@ fn decode_with_scratch(input: Bytes, mode: Mode, scratch: &mut Vec<u8>) -> Resul
             .filter(|kv| kv.key != "ARROW:schema")
             .filter_map(|kv| kv.value.as_ref().map(|v| (kv.key.clone(), v.clone())))
             .collect();
-        let mut reader = builder.with_batch_size(n as usize).build()?;
-        let batch = reader
-            .next()
-            .transpose()?
+        let mut reader =
+            crate::parquet::contain(|| Ok(builder.with_batch_size(n as usize).build()?))?;
+        let batch = crate::parquet::contain(|| Ok(reader.next().transpose()?))?
             .ok_or_else(|| anyhow::anyhow!("empty parquet"))?;
         ensure!(
-            batch.num_rows() == n as usize && reader.next().is_none(),
+            batch.num_rows() == n as usize
+                && crate::parquet::contain(|| Ok(reader.next()))?.is_none(),
             "unexpected batch count"
         );
         if matches!(mode, Mode::ParquetNormalizedLz4) {

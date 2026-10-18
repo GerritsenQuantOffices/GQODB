@@ -63,6 +63,10 @@ name = "batch"
 path = "prototype/tests/batch.rs"
 
 [[test]]
+name = "malformed"
+path = "prototype/tests/malformed.rs"
+
+[[test]]
 name = "real_roundtrip"
 path = "prototype/tests/real_roundtrip.rs"
 
