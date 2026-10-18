@@ -37,6 +37,11 @@ subject to change.
 - **The `prototype/` directories.** Each crate keeps its source and tests under
   `prototype/` for historical reasons. The directory name is not a statement about the
   maturity of one crate over another, and the layout may change.
+- **Rust entry points of `gqodb-lang` and `gqodb-cli` (0.x, may change).** `gqodb_lang::{parse, plan,
+  to_canonical, render_all}` and `gqodb_lang::time::*`, with the syntax tree, `Plan`, `Session` and
+  `Diagnostic` types they use; `gqodb_cli::exec::Executor`, `gqodb_cli::exec::FileExecutor` and
+  `gqodb_cli::sink::Sink`, with `Options`, `Report`, `SkipReason` and `ExecError`. Neither crate has been
+  released; names, signatures and the variants of these enums can change in any 0.x version.
 - **Command-line interfaces.** `gqodb-codec`, `ob_store` and `gqodb` subcommands, arguments and
   the JSON printed by `inspect` can change. Do not parse them in production scripts. For `gqodb`
   the same holds for the command language itself (grammar, keywords, reserved words), its error

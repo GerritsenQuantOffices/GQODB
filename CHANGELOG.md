@@ -19,12 +19,22 @@ convention: a change that is not backwards-compatible bumps the minor version, a
   (a new file, never overwritten). It reads files only.
 - The command language: `show`, `explain`, `use`, `help` and `quit`, with the streams `trades`, `quotes`
   and `book`, an explicit clock for every range (`available`, `received`, `source`, `sequence`; no default)
-  and the steps `take`, `skip`, `columns` and `order`. Ten error codes with a place in the source; the
+  and the steps `take`, `skip`, `columns` and `order`. Ten error codes. The errors found while parsing and
+  planning point at the place in the source; those found while running (an unreadable file, a budget flag,
+  a path) do not, and `E-VENUE` is defined but never produced. The
   words `as`, `provenance`, `quality`, `uncertainty`, `join`, `asof`, `import`, `capture` and `ledger`
   are reserved for the GQODB engine and give `E-ENGINE`. Reference: `docs/LANGUAGE.md`, which lists the
   flaws that are known. A 0.x preview with no stability promise (see `docs/API_STABILITY.md`).
-- Fuzz target `lang_parse` (the language parser and printer) in the libFuzzer harness; see
-  `docs/FUZZING.md`.
+- Behaviour pinned by tests, from the final review of the language: `--out` writes CSV by default, takes
+  exactly one `show` and removes its file when the run fails; a script file and each interactive line are
+  read only up to 1 MiB plus one byte; at most 20 diagnostics are written, with source lines cut around the caret; `quit` ends a
+  pipe or loop wherever it stands; the interactive prompt goes to standard error; a read error on standard
+  input is an error; links out of a directory, broken links and entries that are not regular files are
+  named as skipped, and a link to a file that is read already is not read twice; files with a decimal
+  scale above 12 or a clock column of the wrong type are refused; `--skip-bad` also skips a file whose
+  columns differ; `order` reports the rows with an empty clock value that it put last.
+- Fuzz target `lang_parse` (the language parser and printer, and the rendering of every diagnostic) in the
+  libFuzzer harness; see `docs/FUZZING.md`.
 
 ## [0.1.0] - 2026-10-18
 

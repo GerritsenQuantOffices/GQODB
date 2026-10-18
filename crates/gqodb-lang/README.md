@@ -3,7 +3,7 @@
 The GQODB command language (0.x preview): lexer, parser, diagnostics and planner. No I/O and no
 dependencies.
 
-> **0.1.0 preview.** No stability promise: the grammar, the error codes and texts and this API may
+> **0.x preview, not yet released.** No stability promise: the grammar, the error codes and texts and this API may
 > change in any 0.x release (see [API stability](https://github.com/GerritsenQuantOffices/GQODB/blob/main/docs/API_STABILITY.md)).
 > Part of the [GQODB open layer](https://github.com/GerritsenQuantOffices/GQODB/blob/main/README.md).
 

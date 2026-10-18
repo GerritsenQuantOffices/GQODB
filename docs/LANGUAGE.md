@@ -44,8 +44,8 @@ The rows go to standard output; the three lines that start with `--` are the foo
 error. The command selected the rows of `SYNTH` whose sequence number is in the half-open range `[1, 3)`,
 read the directory `./demo`, skipped the order-book file because it holds another stream, and said
 what it scanned. In the `text` blocks of this page, a command line is followed by what it prints. A line that
-starts with `$ ` is a command of the language as typed, and it parses; a line without `$ ` carries
-flags or does not parse. The `sh` blocks show invocations to copy. The examples show what a pipe
+starts with `$ ` is a command of the language as typed, and it parses. A `gqodb` line without `$ ` that is
+followed by output carries flags or does not parse. The `sh` blocks show invocations to copy. The examples show what a pipe
 or a file receives (CSV); on a terminal the default format is an aligned table (section 9).
 
 Three rules shape the whole language:
@@ -64,7 +64,7 @@ Three rules shape the whole language:
 | `explain show ...` | Prints what a `show` would read, per file, without reading data blocks. |
 | `use clock <clock>` / `use path <path>` | Sets a clock or a path for the following commands of the same run. |
 | `help [<topic>]` | Prints the usage text, or one topic: `clocks`, `ranges`, `steps`, `flags`, `errors`. |
-| `quit` / `exit` | Ends the script or command line: the commands after it are not run. (The interactive loop is a special case, see section 13.) |
+| `quit` / `exit` | Ends the run: the commands after it are not run, in a script, a command line, a pipe or the interactive loop, wherever on the line it stands (`quit;`, `show ...; quit`, `quit # bye`). |
 
 **Running commands.** The `gqodb` binary takes a command in three ways:
 
@@ -78,20 +78,28 @@ gqodb                                            # commands from the terminal, o
 A single argument is one whole command line. Among several arguments, one that holds whitespace is
 treated as quoted. `gqodb run <file>` and a command line may hold several commands separated by a
 newline or `;`; `#` starts a comment to the end of the line. A script is parsed completely before
-anything runs. The parse reports the first error of each command, so one script shows all its broken
-lines at once, except that a lexical error (an unclosed quote) stops the parse and is the only one
-reported; the exit code is 2 and nothing runs. After that the commands run in order and the run stops
-at the first one that fails, with that command's exit code.
+anything runs. The parse reports the first error of each command, so one script shows its broken
+lines together, except that a lexical error (an unclosed quote) stops the parse and is the only one
+reported. At most 20 errors are written, followed by one line `... and <n> more`, and a source line longer
+than 120 characters is cut around the caret (`...` marks the cut side). The exit code is 2 and nothing
+runs. After that the commands run in order and the run stops at the first one that fails, with that
+command's exit code.
 `use clock` and `use path` last until the end of the run; they are not kept between runs. A script
-file, or one command line given to the binary, may not be longer than 1 MiB (1,048,576 bytes).
+file, one command line given to the binary, or one line of the interactive loop may not be longer than
+1 MiB (1,048,576 bytes). A script file and a line of the interactive loop are read only up to that size plus
+one byte, so a larger or endless input (a file such as `/dev/zero`) is refused with E-SYNTAX (exit code 2)
+without being read whole; in the interactive loop that ends the session. `gqodb run` takes exactly one file.
 
 Without arguments, `gqodb` reads commands line by line. On a terminal, an error is shown and the
-loop goes on. When the input is a pipe, the first failing line ends the run with its exit code.
-There is no line editing; `rlwrap gqodb` adds history.
+loop goes on, and the prompt `gqodb> ` is written to standard error, only when standard input is a
+terminal. When the input is a pipe, the first failing line ends the run with its exit code. A line that
+cannot be read from standard input (for example one that is not valid UTF-8) is `error[E-FILE]: cannot
+read standard input: <reason>` with exit code 1, and the lines after it do not run. `--out` cannot be used
+here: it is refused (section 9). There is no line editing; `rlwrap gqodb` adds history.
 
-`help` prints a usage text; `help <topic>` prints one of the five topics, and any other topic is an
-error (exit code 2) that lists them. `gqodb --help` and `gqodb -h` print the same usage text as
-`help`.
+`help` prints a usage text that names the five topics; `help <topic>` prints one of them, and any other
+topic is an error (exit code 2) that lists them. `gqodb --help` (with or without other words) and
+`gqodb -h` print the same usage text as `help`.
 
 Keywords are case-insensitive: verbs, stream names, clock names, step words and the names in the
 keyword form (`stream=`, `symbol=`). Symbols, venues and paths are compared exactly as written.
@@ -188,9 +196,17 @@ stream is skipped as "other stream". Both are counted and named in the footer.
 
 **Paths.** `in <path>` (or `use path`) names a file or a directory. A file path is read whatever its
 name is. A directory means its direct children whose names end in `.gqodb.tick` or `.gqodb.ob`, sorted
-by name; it is not searched recursively. Other files and subdirectories are ignored, and they are not
-named in the footer or in `explain` (only the files that qualify by name are counted). A command with
-no path at all is E-PATH.
+by name; it is not searched recursively. Files whose names do not fit, and everything inside
+subdirectories, are ignored: they are not listed or counted anywhere. A symbolic link to a file inside the
+directory (also one in a subdirectory of it) is followed.
+
+An entry whose name fits but that is not read is named in the footer (`-- skipped <name>: <reason>`) and in
+`explain`. The reasons: `symbolic link to outside the directory`; `broken symbolic link`; `not a regular
+file` (a subdirectory, a pipe, a device, or a link to one); and `duplicate of <name>`, for a symbolic link
+to a file that is read already, which is then read once, under its own name or else under the first link in
+name order. These entries are never opened, so a pipe cannot make a run wait. A path that is neither a file
+nor a directory is E-PATH (`is neither a file nor a directory`), and so is a command with no path at all. A
+file name inside a directory that is not valid UTF-8 is read, and shown with U+FFFD for the bytes that are not.
 
 What the columns hold:
 
@@ -202,7 +218,10 @@ What the columns hold:
   number and cannot be empty.
 - `price`, `bid`, `ask`, `quantity`, `bid_quantity` and `ask_quantity` are stored as integers with a scale
   (`gqodb.price_decimals` and `gqodb.quantity_decimals` in the file metadata). A file that lacks either,
-  or holds a value that is not a number, is an E-FILE error (exit code 1).
+  holds a value that is not a number, or a scale above 12 is an E-FILE error (exit code 1). So is a file
+  whose clock column (`source_utc_ns`, `received_utc_ns`, `available_utc_ns`, `sequence`) is not a 64-bit
+  integer, or that lacks the column of the clock a range or `order` uses. (Files from the codec
+  facade always pass; the check is for files written some other way.)
 - `side`, `level` and `action` are small whole numbers as stored. This repository does not interpret
   them; the meaning of `side` and `action` stays with the writer.
 
@@ -268,8 +287,11 @@ demo.gqodb.tick: 1 of 1 blocks to read (clock sequence is not indexed in this fi
 ```
 
 `explain` opens each file and reads its header and block index; it reads no data blocks. It does not
-write the footer and ignores `--format` and `--out`. The byte count is an upper bound: it adds up every
-block that holds the symbol, also those the index would skip.
+write the footer and ignores `--format` and `--out`. It names the entries that are left out of a directory
+with their reason. The byte count adds up the blocks that would be read (the blocks that hold the symbol and
+that the index does not skip); it is an upper bound, since a budget can stop the read earlier. With
+`--skip-bad`, a file that cannot be opened is listed (`<file>: could not be read (<reason>); skipped with
+--skip-bad`) and the exit code stays 0; without it, that file is an E-FILE error.
 
 **Choosing a clock for the session.** `use clock <clock>` sets the clock for the following commands
 of the run; `on <clock>` after a range overrides it for that command. `order` without `on` uses the
@@ -291,8 +313,9 @@ The form is strict: four-digit year, two-digit month, day, hour, minute and seco
 `Z`. A time zone other than `Z` is an error (E-RANGE, "not a UTC time"), as is an impossible date or
 time (30 February, hour 24). Times are whole nanoseconds in a signed 64-bit number, so only instants from
 1677-09-21T00:12:43.145224192Z to 2262-04-11T23:47:16.854775807Z can be written: 1677-09-22 and
-2262-04-11 are accepted, 1677-09-21 and 2262-04-12 are refused. (The error text for a refused date says
-"outside the supported years 1677 to 2262".)
+2262-04-11 are accepted, 1677-09-21 and 2262-04-12 are refused, because a date alone is midnight at the start
+of that day. (The error text for a refused time names the limits: "outside the supported times
+1677-09-21T00:12:43.145224192Z to 2262-04-11T23:47:16.854775807Z".)
 
 On the `sequence` clock a bound is a whole number (digits only, no sign) that fits a signed 64-bit
 number, for example `100..200`. A date there, or a number on a time clock that is not a date, is E-RANGE.
@@ -312,7 +335,7 @@ E-SYNTAX).
 | `take <n>` | At most `n` rows. `take 0` is allowed and gives no rows. |
 | `skip <n>` | Passes over the first `n` rows. |
 | `columns <a>, <b>` | Chooses and orders the columns. A column named twice is E-COLUMN. |
-| `order [on <clock>] [desc]` | Sorts on a clock. The sort is stable. Rows with an empty value on that clock come last, also with `desc`, and are not dropped. |
+| `order [on <clock>] [desc]` | Sorts on a clock. The sort is stable. Rows with an empty value on that clock come last, also with `desc`, are not dropped, and are counted: the footer says `-- last: <n> rows without a <clock> value`. |
 
 The order in which the steps are written does not change the result: the rows are selected (symbol,
 venue, clock and range), then ordered, then `skip` and `take` apply, and `columns` only decides what is
@@ -375,17 +398,18 @@ Exit code 0 means the command ran and reported; it does not mean the result is c
   only through the bounded read route of the store, with a size bound on what a block may expand to.
 
 **A measurement point, not a promise.** The ignored test `perf_smoke` writes 50 blocks of 4,000 rows
-of one symbol (200,000 rows) and then reads a window of 4,000 rows. On the indexed `available` clock
-the read took 8.2 ms and read 1 of 50 blocks (4,000 rows out). The same window on the `received`
-clock, which is not indexed, took 15.3 ms and read all 50 of 50 blocks (4,000 rows out). These are
-single runs on one Linux x86_64 machine, release build, 18 October 2026; times differ per machine and
-per run, and the block counts are the part the test asserts. Rerun it with
+of one symbol (200,000 rows) and then reads a window of 4,000 rows. The time is end to end, from parsing the
+command to the last row handed to the output. On the indexed `available` clock the read took 8.3 to 8.5 ms
+and read 1 of 50 blocks (4,000 rows out). The same window on the `received` clock, which is not indexed,
+took 15.3 to 15.7 ms and read all 50 of 50 blocks (4,000 rows out). These are three runs each on one Linux
+x86_64 machine, release build, 18 October 2026; times differ per machine and per run. The test asserts the
+row count, the total of 50 blocks and the block counts read, not the times. Rerun it with
 `cargo test -p gqodb-cli --test perf_smoke --release -- --ignored --nocapture`.
 
 ## 9. Output, formats and exactness
 
 **Format.** `--format table|csv|json|ndjson`. The default is `table` when standard output is a
-terminal and `csv` otherwise.
+terminal and `csv` otherwise; with `--out` it is always `csv`, because the destination is a file.
 
 The format examples below show standard output only; the footer follows on standard error as in section 1.
 
@@ -428,18 +452,29 @@ gqodb --format ndjson --time ns "show trades SYNTH in ./demo | take 2 | columns 
 `sequence`, `clock_error_ns`, `side`, `level` and `action` are always whole numbers.
 
 **Where output goes.** Rows go to standard output, or with `--out <file>` into a new file. `--out` creates
-the file and never overwrites: if it exists, the command fails with E-FILE (exit code 1) and the file is
-untouched. The footer and every error go to standard error.
+the file exclusively and never overwrites: if it exists, the command fails with E-FILE (exit code 1) and the
+file is untouched. If the run fails after it created the file (an error with exit code 1: a missing path, a
+damaged file without `--skip-bad`, a write error), the run removes the file it created, so no partial result
+stays behind and the command can be repeated. The file stays when the run finished: also when the result is
+truncated (with `--strict`, exit code 3) and when `--skip-bad` skipped files (exit code 1, the notice is on
+standard error). A file takes the result of one command:
+a command line or script with more than one `show` or `explain`, and the interactive loop, are refused
+before anything is read or written (`error[E-SYNTAX]: --out takes exactly one show command`, exit code 2).
+`explain` ignores `--out`. The footer and every error go to standard error.
 
 **The footer.** After a `show` that finished, standard error holds:
 
-- `-- clock <clock>, range [<begin>, <end>)`, or `-- no time range`;
+- `-- clock <clock>, range [<begin>, <end>)`, where a side that is open is written `..`
+  (`range [2, ..)`), `range (open)` when both are, or `-- no time range`;
 - `-- files: <n> read, <n> skipped · blocks: <read> read of <total> in the files read · bytes: <n> · rows: <n> scanned, <n> out`
-  (`bytes` is the encoded size of the blocks that were read);
-- one `-- skipped <file>: <reason>` per skipped file (other stream, not a normalized tick or book file,
-  no venue label, other venue);
+  (`bytes` is the encoded size of the blocks that were read; `<total>` is the number of blocks of the files that
+  were read, so files that were not opened because a limit or `take` ended the read are not in it);
+- one `-- skipped <file>: <reason>` per skipped file or directory entry (other stream, not a normalized
+  tick or book file, no venue label, other venue, and the reasons for entries that are not plain files,
+  section 4);
 - one `-- could not read <file>: <reason>` per file that `--skip-bad` skipped;
-- `-- excluded: <n> rows without a <clock> value`, when the empty-clock rule dropped rows;
+- `-- excluded: <n> row(s) without a <clock> value`, when the empty-clock rule dropped rows;
+- `-- last: <n> row(s) without a <clock> value`, when `order` put rows with an empty value last;
 - `-- truncated: <which budget> (limits: ...)`, when a budget stopped the read.
 
 **Damaged files.** A file that cannot be read, or a block that does not decode, is an E-FILE error with
@@ -448,14 +483,17 @@ written at all, but `csv`, `json` and `ndjson` may already have written the rows
 (a `json` array is then left unclosed). Files
 are never repaired. With `--skip-bad` an unreadable file is skipped, and a block that does not decode ends the reading
 of that file (the rows of its earlier blocks stay in the output); either is named in the footer
-(`-- could not read ...`), the other files are read, and the exit code is 1 instead of 0. Other
-failures still end the run with E-FILE (section 13). Without the
-flag, a damaged file is never skipped silently.
+(`-- could not read ...`), the other files are read, and the exit code is 1 instead of 0. The same
+holds for a file that cannot take part: its columns differ from those of the first file read, it lacks a column that
+the command names, or its scale or clock columns are wrong (section 4); that check comes before any row of the
+file or any header is written. A failure while a decoded row is turned into text still ends the run with
+E-FILE. Without the flag, a damaged file is never skipped silently.
 
-**A closed output pipe.** If the reader of standard output goes away (`gqodb ... | head`), the whole run
-ends quietly with exit code 0: no error text, no later commands of a script or of the loop. The one
-exception is `--skip-bad`: files that had already been skipped are still reported on standard error,
-and the exit code is then 1.
+**A closed output pipe.** If the reader of standard output goes away (`gqodb ... | head`), the first write
+to it that fails ends the whole run quietly with exit code 0: no error text, and no later command of a
+script or of the loop runs. (A pipe buffers some output, so a short result can be written before the
+reader's exit is noticed.) The one exception is `--skip-bad`: files that had already been skipped are still
+reported on standard error, and the exit code is then 1.
 
 ## 10. Errors and exit codes
 
@@ -469,11 +507,13 @@ error[E-CLOCK]: a range needs a clock
   help: add one of: on available | on received | on source | on sequence
 ```
 
-Errors that arise while files are read have no caret line: `error[E-FILE]: c.gqodb.tick: invalid footer`.
+Errors that arise while files are read have no caret line and do not name the command:
+`error[E-FILE]: c.gqodb.tick: invalid footer`. Of a long list, 20 errors are written and then
+`... and <n> more`.
 
 | Code | When | Exit code |
 | --- | --- | --- |
-| E-SYNTAX | The command does not follow the grammar; an unknown flag or flag value; an unknown help topic; input longer than 1 MiB; a step given twice | 2 |
+| E-SYNTAX | The command does not follow the grammar; an unknown flag or flag value; an unknown help topic; input longer than 1 MiB; a step given twice; `--out` with more than one `show` or with the interactive loop; `run` without exactly one file | 2 |
 | E-CLOCK | A range or `order` without a clock; an unknown clock name | 2 |
 | E-RANGE | A range that is malformed, impossible, out of order or of the wrong kind for its clock | 2 |
 | E-STREAM | A stream other than `trades`, `quotes`, `book` | 2 |
@@ -482,7 +522,7 @@ Errors that arise while files are read have no caret line: `error[E-FILE]: c.gqo
 | E-VENUE | Defined and listed by `help errors`; no command produces it in this version (section 12) | none |
 | E-ENGINE | A word reserved for the engine (section 11) | 2 |
 | E-BUDGET | A budget flag outside its limits (2); more than 10,000 files, or more rows than `order` can hold (1) | 2 or 1 |
-| E-FILE | A damaged or unreadable data file; a file that cannot be created or written for `--out`; a script that cannot be read; a file with a missing or invalid scale | 1 |
+| E-FILE | A damaged or unreadable data file; a file that cannot be created or written for `--out`; a script that cannot be read; standard input that cannot be read; a file with a missing or invalid scale or a wrong clock column | 1 |
 
 Truncation is not an error code: it is a footer line (section 8).
 
@@ -525,8 +565,9 @@ symbol, or inside quotes, a reserved word is plain text: `show trades as in ./d`
 
 E-ENGINE is not given everywhere. A reserved word in the stream position (`show quality SYNTH ...`) is
 E-STREAM; in the clock position (`on join`, `use clock join`) it is E-CLOCK ("unknown clock"); the
-word directly after `use` (`use join`), a help topic (`help join`) and a name in the keyword form
-(`show join=1 ...`) give E-SYNTAX; and as a path (`use path join`) it is plain text.
+word directly after `use` (`use join`), a help topic (`help join`), a name in the keyword form
+(`show join=1 ...`) and the number of a step (`| take join`) give E-SYNTAX; in a `columns` step
+(`| columns join`) it is E-COLUMN, an unknown column; and as a path (`use path join`) it is plain text.
 
 ## 12. Venue
 
@@ -561,41 +602,25 @@ call. `inspect`, `verify` and `recover` are not commands of the language: they s
 and `ob_store`. There is no line editor.
 
 **Known limits.** These were found by reading the code and, where it was possible, by running it. They
-are known flaws, not design. They are expected to be fixed, and this list changes then.
+are known flaws or rough edges, not design. This list changes when they are fixed.
 
-- **`--out` is created once per `show`.** A script or loop with a second `show` and `--out` fails at
-  the second one with E-FILE, because the file now exists. Use one `show` per `--out` file.
-- **The interactive loop stops only on a line that is exactly `quit` or `exit`** (case and surrounding
-  spaces do not matter). `quit;`, or `show ...; quit` on one line, runs the command and then goes on
-  reading. In a script file given to `gqodb run`, `quit` does end the script.
-- **The prompt `gqodb> ` is written to standard output** when standard input is a terminal, also when
-  standard output is redirected to a file, so it ends up in that file.
-- **`gqodb run <file>` reads the whole file into memory before it checks the 1 MiB limit**, and the
-  interactive loop reads a line without a bound. A very large or endless input (for example
-  `/dev/zero`) is read until memory runs out instead of being refused.
 - **JSON writes whole numbers as bare numbers.** `sequence`, `clock_error_ns`, `side`, `level`, `action`
   and, with `--time ns`, the time columns can exceed 2^53 (a nanosecond time today is about 1.8e18).
   A reader that parses JSON numbers as floating point, as JavaScript does, loses precision above 2^53.
-  Decimals and ISO times are strings and are exact. CSV is exact.
-- **`explain` ignores `--skip-bad`.** One unreadable file makes `explain` fail with E-FILE, while the
-  `show` would have skipped it. Its byte count is an upper bound over all blocks with the symbol.
-- **Files that do not qualify by name are ignored silently.** In a directory, a file whose name does
-  not end in `.gqodb.tick` or `.gqodb.ob`, and every subdirectory, is not listed or counted anywhere.
-- **An outside or broken symbolic link is dropped silently.** A symbolic link in a directory is followed
-  only when its target is a file inside that directory; any other link is left out of the file list
-  and is not named in the footer or in `explain`.
-- **The footer's `blocks: <read> of <total>` counts the total only over files that were opened.** When a
-  read stops early (`take`, a budget), the files after the stop are not counted, so the total can be
-  lower than the number of blocks the directory holds.
-- **Files of one stream with different columns stop the run.** If a later file has other columns than
-  the first file that was read (no `columns` step given), the run ends with E-FILE, also with
-  `--skip-bad`. The same holds when a file has a column of the wrong type, or lacks a column named in
-  a `columns` step. (Found by reading the code; not reproduced with a test file.)
+  Decimals and ISO times are strings and are exact. CSV is exact. Writing the numbers as strings would
+  make `--time ns` output unusable for most readers, so this stays as it is.
 - **A closed output pipe is noticed only by `show`.** `explain` and `help` ignore write errors, so a pipe
   that closes while they write is not noticed. A following command that fails before it writes (for
   example `explain ...; show ... in ./missing`) still prints its error and exits 1.
-- **`help` does not list the topics.** The general usage text does not mention `help <topic>`; the
-  five topics are `clocks`, `ranges`, `steps`, `flags` and `errors`.
-- **The hint of E-RANGE for a keyword range is misleading.** `range=x..y` is refused because it does not
-  start with a digit or a dot, but the hint then says "a range is `<begin>..<end>`", which `x..y` is.
+- **`explain` with `--skip-bad` exits 0** when it listed a file that could not be read; `show` exits 1 then.
+- **A path argument that is not valid UTF-8 is changed.** A byte that is not UTF-8 becomes U+FFFD in the
+  command text, so such a path points to another name and a directory with that name cannot be addressed
+  from the command line. (File names inside a directory are read as they are.)
+- **The `excluded` count covers the rows that were decoded.** It counts rows with an empty clock value in
+  the blocks that were read, including rows after the point where `take` stopped the output; it is not a
+  count over the rows scanned before that point only.
+- **`clock=` without `range=` and without `order` has no effect and says nothing.** In the keyword form,
+  `show stream=trades symbol=A clock=source path=./d` reads every row, and the footer says `no time range`.
+- **Names that do not fit are ignored silently.** In a directory, a file whose name does not end in
+  `.gqodb.tick` or `.gqodb.ob`, and everything inside subdirectories, is not listed or counted anywhere.
 - **E-VENUE is never produced.** A venue that does not match gives skipped files and an empty result.

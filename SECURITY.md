@@ -32,15 +32,23 @@ The `gqodb` command (`gqodb-cli`) reads data blocks only through `Reader::read_b
 size bound of `gqodb-codec` on what a block may expand to, and never through the unchecked layer
 above. A block that does not decode, or a file whose footer or index is invalid, is an error that
 names the file and the reason (exit code 1); it is never repaired. With `--skip-bad` such a file is skipped
-instead, named on standard error, and the exit code is still 1. Every read is bounded by budgets for
+instead, named on standard error, and the exit code is still 1; when a block fails halfway through a file,
+the rows of the earlier blocks of that file stay in the output. The same flag skips a file whose columns
+differ from those of the first file, before any of its rows are written. A file written without the codec
+facade is checked for a decimal scale above 12 and for clock columns that are not 64-bit integers, and is
+an error (or, with `--skip-bad`, skipped) when it fails. Every read is bounded by budgets for
 output rows, scanned rows and blocks (defaults 1,000, 1,048,576 and 4,096; hard maxima 1,000,000,
-25,600,000 and 100,000), and by 10,000 files per directory and 2,000,000 rows for `order`; a command
-text longer than 1 MiB is refused, but only after it has been read completely (see the known flaws below).
-A budget that stops a read is reported, and under `--strict` it is an error. The command
-creates no file except the one named by `--out`, which it never overwrites, and it does not follow a
-symbolic link that points outside the directory it lists. The language parser has a libFuzzer target;
-the executor has none (`docs/FUZZING.md` lists what was not run), and the command language has no
-stability promise. Known flaws are listed in [docs/LANGUAGE.md](docs/LANGUAGE.md#13-what-is-not-in-phase-1-and-what-is-known-to-be-wrong).
+25,600,000 and 100,000), and by 10,000 files per directory and 2,000,000 rows for `order`. A command text
+longer than 1 MiB is refused (exit code 2). A script file and each line of the interactive loop are read only
+up to 1 MiB plus one byte, so an endless file or stream is refused without being read whole. The error output is bounded too: at most 20 diagnostics are written, followed by a count of the
+others, and a source line is cut to about 120 characters around the caret. A budget that stops a read is
+reported, and under `--strict` it is an error. The command creates no file except the one named by
+`--out`, which it never overwrites and removes again when the run fails. It does not follow a
+symbolic link that points outside the directory it lists; such links, broken links, and entries that are
+not regular files (pipes, devices, subdirectories) are named in the footer and are never opened. The
+language parser has a libFuzzer target that also renders every diagnostic; the executor has none
+(`docs/FUZZING.md` lists what was not run), and the command language has no stability promise. Known
+limits are listed in [docs/LANGUAGE.md](docs/LANGUAGE.md#13-what-is-not-in-phase-1-and-what-is-known-to-be-wrong).
 
 Benchmark evidence under `results/` is hash-checked against its receipts. SHA-256
 agreement proves the bytes match a recorded digest — not that the publisher is

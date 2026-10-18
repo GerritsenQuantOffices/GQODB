@@ -11,7 +11,7 @@
 
 <img src="docs/assets/badge-status.svg" alt="status: prototype">
 <img src="docs/assets/badge-licence.svg" alt="licence: Apache-2.0">
-<img src="docs/assets/badge-tests.svg" alt="tests: 76 passed on Linux and macOS">
+<img src="docs/assets/badge-tests.svg" alt="tests: 207 passed on Linux">
 <img src="docs/assets/badge-evidence.svg" alt="evidence: 28 receipted files">
 
 [Install](#build-it) · [Formats](#formats) · [Benchmarks](#benchmarks) ·
@@ -35,7 +35,8 @@ measure, and every file it writes is a plain `.gqodb` file you can inspect witho
 > **A prototype, released as source: 0.1.0 preview.** There is no crates.io release,
 > no signed artifact and no format-stability promise yet: APIs, command-line tools and
 > file formats may change in any 0.x release (see [API stability](docs/API_STABILITY.md)
-> for what is and is not promised). The tests pass on Linux and macOS in CI; Windows is
+> for what is and is not promised). The tests of the four crates of 0.1.0 pass on Linux and macOS in CI;
+> the newer crates `gqodb-lang` and `gqodb-cli` have been run on Linux only so far. Windows is
 > not supported yet (one test fails there, see "Still not measured"). The GQODB engine — raw journal,
 > ledger and receipts, recovery, quality, features, causal query, ops and
 > connectors — is **not** in this repository and is not licensed by it.
@@ -48,7 +49,8 @@ measure, and every file it writes is a plain `.gqodb` file you can inspect witho
 
 A price is an integer plus its scale. A round trip restores every value, null,
 timestamp and float bit exactly — or it returns an error. Tested on the fixtures and
-column types in the suites and by 15 fuzz targets; not proven for every schema. Nothing
+column types in the suites and by 15 fuzz targets for the storage and codec code (a sixteenth, for the
+command language, is described in [docs/FUZZING.md](docs/FUZZING.md)); not proven for every schema. Nothing
 is rounded to fit a block, and a corrupt frame is refused rather than repaired.
 
 `Functionally tested` — round trips, corrupt frames, truncated tails
@@ -96,11 +98,11 @@ results. B06 and B12 have no receipts and are marked as historical.
 
 <div align="center">
 
-| 4 | 76 | 28 | 1 |
+| 6 | 207 | 28 | 1 |
 |:---:|:---:|:---:|:---:|
-| crates | tests passed, 0 failed, 0 ignored | receipted result files | published release (0.1.0 preview) |
+| crates | tests passed, 0 failed, 1 ignored | receipted result files | published release (0.1.0 preview) |
 
-<sub>Rust 1.96.0 · Linux x86_64 · 18 October 2026 · plus 7 doc-tests · default build and `zstd-input` build both green</sub>
+<sub>Rust 1.96.0 · Linux x86_64 · 18 October 2026 · plus 7 doc-tests · default build and the `gqodb-blocks` `zstd-input` build both green · the two newer crates were not run on macOS</sub>
 
 </div>
 
@@ -188,8 +190,8 @@ Requirements for a manual build: Git, a C linker (`cc`), Rust and, for the two
 verification scripts, Python 3 (standard library only). The tested toolchain is Rust
 1.96.0 on Linux x86_64. The declared minimum, Rust 1.85, was built and tested on Linux
 on 2026-10-18 with the committed `Cargo.lock` and has a CI job; newer dependency
-versions are not covered. The tests also pass on macOS (GitHub Actions on 2026-10-18, and locally on Apple silicon with Rust 1.98.1);
-the Windows CI entry fails, see "Still not measured". The default build is pure Rust. The original B06
+versions are not covered. The tests of the four crates of 0.1.0 also pass on macOS (GitHub Actions on 2026-10-18, and locally on Apple silicon with Rust 1.98.1);
+the two newer crates (`gqodb-lang`, `gqodb-cli`) have not been run on macOS yet. The Windows CI entry fails, see "Still not measured". The default build is pure Rust. The original B06
 trade samples were zstd-compressed Parquet; to read inputs like that, build
 `gqodb-blocks` with `--features zstd-input`, which adds the native zstd library from
 crates.io. It only decodes inputs and is never one of the measured codecs.
@@ -473,8 +475,8 @@ dictionary-LZ4 Parquet, at 14.3–14.5% longer decode than that Parquet baseline
 | Instruments and venues beyond Bybit levels, Binance ETH/UNI trades (B06) and Binance PAXGUSDT trades (B17) | *not measured* |
 | Multi-threaded, concurrent or networked use; other hosts | *not measured* — B17 is one thread on one host |
 | kdb+ / q | no comparison published |
-| Rust versions other than 1.85.0 and 1.96.0, Windows | *Linux and macOS pass in CI, Windows fails* — only 1.85.0 (the declared minimum) and 1.96.0 were built and tested on Linux with the committed `Cargo.lock`; the first GitHub Actions run (18 October 2026, commit `d632932`): the `test` (Rust 1.96.0, Linux), `msrv` (1.85.0) and `deny` jobs passed and so did the macOS build-and-test entry; the Windows entry **failed** in the benchmark example test `fsync_tree_handles_files_and_directories` (opening a directory to fsync it gives `Access is denied` on Windows), the job stops there, so Windows is not supported yet; the 76 tests and 7 doc-tests also passed locally on macOS (Apple silicon, Rust 1.98.1, 2026-10-18); other Rust versions *not tested* |
-| Adversarial fuzzing of the readers | *partly done* — 15 libFuzzer targets (block, store, codec and Parquet readers, round trips), each at least 35 minutes (Parquet 2 x 60) on one machine with AddressSanitizer: 9 defects fixed (8 found by fuzzing, 1 by reading the code), 0 open; after the last fix (a 128 MiB limit on decoded string bytes in the unchecked decoding layer) the 10 targets that reach that code were re-run for about 11 minutes each without findings. Not exhaustive, and the unchecked layer is not audited — see [docs/FUZZING.md](docs/FUZZING.md) |
+| Rust versions other than 1.85.0 and 1.96.0, Windows | *Linux and macOS pass in CI, Windows fails* — only 1.85.0 (the declared minimum) and 1.96.0 were built and tested on Linux with the committed `Cargo.lock`; the first GitHub Actions run (18 October 2026, commit `d632932`): the `test` (Rust 1.96.0, Linux), `msrv` (1.85.0) and `deny` jobs passed and so did the macOS build-and-test entry; the Windows entry **failed** in the benchmark example test `fsync_tree_handles_files_and_directories` (opening a directory to fsync it gives `Access is denied` on Windows), the job stops there, so Windows is not supported yet; the 76 tests and 7 doc-tests of the four crates of 0.1.0 also passed locally on macOS (Apple silicon, Rust 1.98.1, 2026-10-18); other Rust versions *not tested* |
+| Adversarial fuzzing of the readers | *partly done* — 15 libFuzzer targets (block, store, codec and Parquet readers, round trips), each at least 35 minutes (Parquet 2 x 60) on one machine with AddressSanitizer: 9 defects fixed (8 found by fuzzing, 1 by reading the code), 0 open; after the last fix (a 128 MiB limit on decoded string bytes in the unchecked decoding layer) the 10 targets that reach that code were re-run for about 11 minutes each without findings. A 16th target, for the command language, found one more defect (fixed); its runs are listed in [docs/FUZZING.md](docs/FUZZING.md). Not exhaustive, and the unchecked layer is not audited — see [docs/FUZZING.md](docs/FUZZING.md) |
 
 ## Evidence
 

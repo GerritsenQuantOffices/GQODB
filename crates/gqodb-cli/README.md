@@ -3,7 +3,7 @@
 The `gqodb` command: runs the GQODB command language over native tick and order-book files
 (0.x preview).
 
-> **0.1.0 preview.** No stability promise: the command language, its error texts, the footer and the
+> **0.x preview, not yet released.** No stability promise: the command language, its error texts, the footer and the
 > output formats may change in any 0.x release (see
 > [API stability](https://github.com/GerritsenQuantOffices/GQODB/blob/main/docs/API_STABILITY.md)).
 > Part of the [GQODB open layer](https://github.com/GerritsenQuantOffices/GQODB/blob/main/README.md).
