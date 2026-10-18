@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Installer prerequisite consent
         run: python3 tests/test_installer.py
       - name: Install tested Rust toolchain
@@ -18,8 +18,14 @@ jobs:
         run: cargo +1.96.0 clippy --workspace --all-targets --locked -- -D warnings
       - name: Test (pure Rust default)
         run: cargo +1.96.0 test --workspace --all-targets --locked
+      - name: Doc-tests
+        run: cargo +1.96.0 test --workspace --doc --locked
       - name: Test with zstd Parquet input
         run: cargo +1.96.0 test -p gqodb-blocks --features zstd-input --all-targets --locked
+      - name: API docs build without warnings
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: cargo +1.96.0 doc --workspace --no-deps --locked
       - name: Build release binaries
         run: cargo +1.96.0 build --workspace --bins --release --locked
       - name: Build B17 benchmark examples
@@ -30,3 +36,66 @@ jobs:
         run: python3 results/verify_public_evidence.py
       - name: Verify every declared benchmark file is tracked
         run: python3 benchmarks/verify_manifest.py
+      - name: Per-crate licence files match the repository licence
+        run: |
+          for crate in types blocks store codec; do
+            cmp LICENSE "crates/gqodb-$crate/LICENSE"
+            cmp NOTICE "crates/gqodb-$crate/NOTICE"
+          done
+      - name: Third-party licence list is up to date
+        run: python3 scripts/third_party_licenses.py --check
+
+  # The declared minimum supported Rust version (workspace `rust-version`), built and
+  # tested with the committed Cargo.lock only. Newer dependency versions are not covered.
+  msrv:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Declared rust-version is the version tested here
+        run: grep -qx 'rust-version = "1.85"' Cargo.toml
+      - name: Install MSRV toolchain
+        run: rustup toolchain install 1.85.0 --profile minimal
+      - name: Check
+        run: cargo +1.85.0 check --workspace --all-targets --locked
+      - name: Test
+        run: cargo +1.85.0 test --workspace --all-targets --locked
+      - name: Doc-tests
+        run: cargo +1.85.0 test --workspace --doc --locked
+
+  # Licences, advisories, banned/duplicate crates and sources, see deny.toml.
+  # The action runs cargo-deny 0.20.2 (pinned in the action's Dockerfile at this commit).
+  deny:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1
+        with:
+          arguments: --locked --all-features
+
+  # macOS and Windows: unverified until first CI run. These entries were never run by the
+  # author (only Linux x86_64 was available), so they must not block the build. Treat a
+  # green result as the first evidence for those platforms, not a promise.
+  other-platforms:
+    name: build and test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    continue-on-error: true # unverified until first CI run
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Install Rust toolchain
+        run: rustup toolchain install 1.96.0 --profile minimal
+      - name: Build
+        run: cargo +1.96.0 build --workspace --all-targets --locked
+      - name: Test
+        run: cargo +1.96.0 test --workspace --all-targets --locked
+      - name: Doc-tests
+        run: cargo +1.96.0 test --workspace --doc --locked

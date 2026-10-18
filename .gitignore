@@ -1,5 +1,16 @@
 /target/
 /artifacts/
 
+# Release artifacts built by docs/RELEASING.md and packaged crates
+/GQODB-*.tar.gz*
+*.crate
+
+# Editor and OS files
+.DS_Store
+*.swp
+*.rs.bk
+.idea/
+.vscode/
+
 .env
 .env.*

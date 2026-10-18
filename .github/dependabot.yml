@@ -1,0 +1,17 @@
+version: 2
+updates:
+  # Cargo.lock is committed and CI builds with --locked, so every update arrives as a
+  # reviewable pull request. Arrow and Parquet are pinned to exact versions (=59.3.0) in
+  # the crate manifests on purpose; Dependabot may propose a bump of those pins, which
+  # must be reviewed together with the benchmark evidence, not merged automatically.
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+  # Actions are pinned by commit SHA with the tag in a comment; Dependabot updates both.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
