@@ -22,6 +22,10 @@ jobs:
         run: cargo +1.96.0 test -p gqodb-blocks --features zstd-input --all-targets --locked
       - name: Build release binaries
         run: cargo +1.96.0 build --workspace --bins --release --locked
+      - name: Build B17 benchmark examples
+        run: cargo +1.96.0 build --release --locked -p gqodb-store --examples
+      - name: B17 tooling tests (offline fixtures; DuckDB and ClickHouse parts skip when absent)
+        run: python3 tests/test_b17_public_trades.py
       - name: Verify benchmark evidence against its receipts
         run: python3 results/verify_public_evidence.py
       - name: Verify every declared benchmark file is tracked

@@ -15,11 +15,16 @@ equivalent local input. Synthetic B01/B02 runs need no external dataset.
 | B12 | `storage_benchmark` example | `docs/B12_STORAGE_PROTOCOL.md` | `results/b12/` | user-supplied Bybit book capture; historical input not redistributed |
 | B13 | `storage_benchmark` read-only mode | `docs/B13_READ_PROTOCOL.md` | `results/b13/` | historical paired commits and unchanged B12 artifacts named in receipts |
 | B15 | `storage_benchmark` read-only and full modes | `docs/B15_READ_PROTOCOL.md` | `results/b15/` | historical paired commits and unchanged B12 artifacts named in receipts |
+| B17 | `benchmarks/public_trades/harness.py` with the `trades_convert` and `trades_candidate` examples | `docs/B17_PUBLIC_TRADES_PROTOCOL.md` (hash-pinned) | `results/b17-public-trades-20261017/` (hash-checked receipt) | public Binance Vision archives, fetched and checksum-verified by `fetch.sh`; nothing is redistributed |
 
 `./benchmarks/run.sh verify` checks every published result covered by a receipt and
-recomputes the figures printed in the README. `./benchmarks/run.sh synthetic-smoke`
+recomputes the B11, B15 and B17 summaries from the stored results (B06 in part). `./benchmarks/run.sh synthetic-smoke`
 builds the current tree and performs a deliberately small B01/B02-family smoke run;
 it is a correctness/reproducibility check, not a new performance result.
+
+B17 is the first benchmark in this tree that a reader can rerun end to end on public data against
+named baselines (DuckDB, ClickHouse; licence notes in `docs/BASELINE_LICENCES.md`). Its result directory has a hash-checked receipt and every sample;
+the input data (Binance Vision, CC BY-NC-SA 4.0) are not redistributed and must be fetched by the user.
 
 The B13/B15 old-versus-new timings remain historical evidence: their receipts name
 private-development commit IDs because the public repository was extracted after
