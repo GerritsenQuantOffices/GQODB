@@ -1,0 +1,1 @@
+show clock=broker path=./data symbol=EURUSD stream=trades range=2026-03-01..2026-03-02 venue=bybit | skip 2 | take 3

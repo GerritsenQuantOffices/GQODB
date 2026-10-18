@@ -230,7 +230,13 @@ fn range_of(tok: &Token) -> Result<Spanned<RangeExpr>, Diagnostic> {
     let Tok::Atom(a) = &tok.tok else {
         return Err(unexpected(tok));
     };
-    let Some((begin, end)) = a.split_once("..") else {
+    // A range starts with a digit or a dot: the canonical text writes it positionally, where only
+    // such an atom is read as a range.
+    let Some((begin, end)) = a
+        .starts_with(|c: char| c.is_ascii_digit() || c == '.')
+        .then(|| a.split_once(".."))
+        .flatten()
+    else {
         return Err(Diagnostic::new(Code::Range, format!("`{a}` is not a range"), tok.span)
             .with_help("a range is <begin>..<end>, e.g. 2026-03-01..2026-03-02; leave a side empty for open"));
     };

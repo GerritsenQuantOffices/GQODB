@@ -1,0 +1,1 @@
+show trades EURUSD bybit 2026-03-01..2026-03-02 on received in ./data | take 100

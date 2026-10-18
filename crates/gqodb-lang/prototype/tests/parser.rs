@@ -268,3 +268,24 @@ fn errors_point_at_the_problem() {
     );
     assert_eq!(err("show stream=wat symbol=A").code, Code::Stream);
 }
+
+#[test]
+fn keyword_range_must_be_printable_positionally() {
+    // Found by fuzzing (lang_parse): `range=sy6..2026` parsed, but the canonical text writes the
+    // range positionally, where it must start with a digit or a dot, so the text did not parse again.
+    let src = "show stream=trades symbol=A range=sy6-03-01..2026-04/02 clock=source";
+    assert_eq!(err(src).code, Code::Range);
+    let src = "show stream=trades symbol=A range=x..y";
+    assert_eq!(err(src).code, Code::Range);
+    // The accepted forms keep working and print to text that parses again.
+    for ok in [
+        "show stream=trades symbol=A range=2026-03-01..2026-03-02 clock=source",
+        "show stream=trades symbol=A range=..2026-03-02 clock=source",
+        "show stream=trades symbol=A range=.. clock=source",
+    ] {
+        let script = parse(ok).unwrap_or_else(|e| panic!("{ok}: {e:?}"));
+        let canonical = gqodb_lang::to_canonical(&script);
+        let again = parse(&canonical).unwrap_or_else(|e| panic!("{canonical}: {e:?}"));
+        assert_eq!(gqodb_lang::to_canonical(&again), canonical);
+    }
+}

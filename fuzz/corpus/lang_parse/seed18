@@ -1,0 +1,1 @@
+show trades EURUSD | skip 5 | take 10 | columns price, quantity,side | order on source desc

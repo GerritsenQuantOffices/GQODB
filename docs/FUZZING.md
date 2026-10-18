@@ -283,6 +283,30 @@ decodes in the unchecked layer with a peak RSS of 529 MB (measured; `gqodb-codec
 `worst-case decoded expansion exceeds 128 MiB`). Time is not bounded either. Treat the unchecked layer as
 unaudited and use `gqodb-codec` or `Reader::read_block_bounded` for files you did not write.
 
+## Language parser and printer (`lang_parse`)
+
+Target `lang_parse` (added with `gqodb-lang`) feeds UTF-8 text of at most 4096 bytes to `parse`. When
+a script parses, it must print to canonical text that parses again and prints identically, and
+`plan` must not panic for any parsed command. Seeds: 38 command lines taken from the parser and
+golden tests and the CLI help; dictionary `dict/gqodb-lang.dict`. Flags as in `run_target.sh`
+(`-max_len=4096`).
+
+| Run | Seconds | Executions | Coverage | Result |
+| --- | ---: | ---: | --- | --- |
+| 1 | about 99 (stopped by the finding) | 198,208 | not recorded at the stop | 1 finding |
+| 2, after the fix | 601 | 7,419,264 | cov 1927, ft 21944, corpus 6722 | 0 findings |
+
+**Finding 10 (fixed).** `show ... range=sy6-03-01..2026-04/02 ...` was accepted: the keyword form
+took any atom containing `..` as a range, but the canonical text writes the range positionally,
+where only an atom that starts with a digit or a dot is read as a range. The printed text failed to
+parse (`unexpected ...`), which the target reports as a panic. Fix: `range_of` in
+`gqodb-lang` refuses a range that does not start with a digit or a dot (error `E-RANGE`).
+Regression test `keyword_range_must_be_printable_positionally` in
+`crates/gqodb-lang/prototype/tests/parser.rs` failed before the fix and passes after it.
+
+Run once on one machine (two CPUs), one seed. Not run: other sanitizers, longer runs, the CLI
+executor (`gqodb-cli`) and the file readers behind `plan`.
+
 ## What this does not cover
 
 - Sanitizers other than AddressSanitizer; no MemorySanitizer, no Miri, no Valgrind. Release builds

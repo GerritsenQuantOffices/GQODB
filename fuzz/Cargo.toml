@@ -25,6 +25,7 @@ gqodb-types = { path = "../crates/gqodb-types" }
 gqodb-blocks = { path = "../crates/gqodb-blocks" }
 gqodb-store = { path = "../crates/gqodb-store" }
 gqodb-codec = { path = "../crates/gqodb-codec" }
+gqodb-lang = { path = "../crates/gqodb-lang" }
 
 [lib]
 name = "gqodb_fuzz"
@@ -138,6 +139,13 @@ bench = false
 [[bin]]
 name = "roundtrip_store"
 path = "fuzz_targets/roundtrip_store.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "lang_parse"
+path = "fuzz_targets/lang_parse.rs"
 test = false
 doc = false
 bench = false

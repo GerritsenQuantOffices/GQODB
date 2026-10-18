@@ -1,0 +1,4 @@
+use clock received
+# note
+show trades A in ./d;show book B in ./d
+

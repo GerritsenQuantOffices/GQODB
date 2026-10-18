@@ -1,0 +1,1 @@
+show trades EURUSD 2026-03-01T12:30:00Z..2026-03-02 on received in ./data | take 20

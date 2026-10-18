@@ -461,12 +461,17 @@ dependencies = [
  "crc32fast",
  "gqodb-blocks",
  "gqodb-codec",
+ "gqodb-lang",
  "gqodb-store",
  "gqodb-types",
  "libfuzzer-sys",
  "serde",
  "serde_json",
 ]
+
+[[package]]
+name = "gqodb-lang"
+version = "0.1.0"
 
 [[package]]
 name = "gqodb-store"
