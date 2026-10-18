@@ -6,7 +6,11 @@ rust-version.workspace = true
 publish.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Rust-only block feasibility experiments for gqodb"
+description = "Experimental lossless block codecs for market data, with Parquet counter-tests and benchmark tooling (0.x preview)"
+readme = "README.md"
+keywords = ["compression", "market-data", "lossless", "arrow", "parquet"]
+categories = ["compression", "encoding"]
+documentation = "https://docs.rs/gqodb-blocks"
 
 [dependencies]
 flate2 = { version = "=1.1.9", default-features = false, features = ["rust_backend"] }

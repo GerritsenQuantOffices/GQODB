@@ -6,6 +6,11 @@ rust-version.workspace = true
 publish.workspace = true
 license.workspace = true
 repository.workspace = true
+description = "Exact L2 order-book event types and clock-evidence timing types for GQODB (0.x preview)"
+readme = "README.md"
+keywords = ["market-data", "order-book", "timestamps", "clock", "finance"]
+categories = ["data-structures", "date-and-time"]
+documentation = "https://docs.rs/gqodb-types"
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }

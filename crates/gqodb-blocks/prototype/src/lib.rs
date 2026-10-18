@@ -1,4 +1,48 @@
 //! Experimental lossless block formats and benchmark controls, not a database.
+//!
+//! This is a 0.x preview crate: no stability promise, and the `real` block formats
+//! have no compatibility guarantee beyond what the tests pin. Much of this crate is
+//! benchmark and feasibility code (see `docs/API_STABILITY.md` in the repository).
+//!
+//! The entry point for Arrow data is [`real::encode`] / [`real::decode`]: a round
+//! trip either restores the batch exactly (schema, metadata, values, nulls) or
+//! returns an error.
+//!
+//! # Example
+//!
+//! ```
+//! use arrow_array::{ArrayRef, Int64Array, LargeStringArray, RecordBatch};
+//! use bytes::Bytes;
+//! use gqodb_blocks::real::{self, Mode};
+//! use std::sync::Arc;
+//!
+//! let batch = RecordBatch::try_from_iter(vec![
+//!     ("price", Arc::new(Int64Array::from(vec![Some(10_050), None, Some(10_051)])) as ArrayRef),
+//!     ("symbol", Arc::new(LargeStringArray::from(vec!["SYNTH", "SYNTH", "SYNTH"])) as ArrayRef),
+//! ])
+//! .unwrap();
+//!
+//! let bytes = real::encode(&batch, Mode::GqodbBook).unwrap();
+//! assert_eq!(&bytes[..8], b"GQOREAL4"); // the header, not a file extension, names the format
+//! let decoded = real::decode(Bytes::from(bytes), Mode::GqodbBook).unwrap();
+//! assert!(real::equal(&batch, &decoded)); // exact, including the null
+//! ```
+//!
+//! The fixed eight-column integer fixtures used by the benchmarks go through
+//! [`Codec`]:
+//!
+//! ```
+//! use bytes::Bytes;
+//! use gqodb_blocks::{
+//!     Codec,
+//!     data::{generate, Kind, Regime},
+//! };
+//!
+//! let columns = generate(Kind::Trade, Regime::Quiet, 256, 7).unwrap();
+//! let bytes = Codec::AdaptiveSimdLz4.encode(&columns).unwrap();
+//! let decoded = Codec::AdaptiveSimdLz4.decode(Bytes::from(bytes)).unwrap();
+//! assert_eq!(columns, decoded);
+//! ```
 #![forbid(unsafe_code)]
 
 pub mod adaptive;

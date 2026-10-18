@@ -1,5 +1,48 @@
-#![forbid(unsafe_code)]
 //! Checked dispatch over existing native tick/book codecs; no new wire container.
+//!
+//! This is a 0.x preview crate: no stability promise beyond what the tests pin
+//! (see `docs/API_STABILITY.md` in the repository). The format is selected from the
+//! magic bytes at the start of the data ([`detect`]), never from a file extension.
+//! [`encode`] and [`decode`] validate the normalized schema contract and the size
+//! bounds on both sides, and [`inspect`] fully decodes a file to produce a [`Report`].
+//!
+//! # Example
+//!
+//! ```
+//! use bytes::Bytes;
+//! use gqodb_codec::{decode, detect, encode, fixture, Family, Format};
+//!
+//! let batch = fixture(Family::Orderbook).unwrap();
+//! let bytes = encode(&batch, Family::Orderbook).unwrap();
+//! assert_eq!(detect(&bytes).unwrap(), Format::BookBlockV4);
+//!
+//! let decoded = decode(Bytes::from(bytes.clone()), Some(Family::Orderbook)).unwrap();
+//! assert_eq!(decoded, batch);
+//!
+//! // The wrong expected family is refused rather than reinterpreted.
+//! assert!(decode(Bytes::from(bytes), Some(Family::Tick)).is_err());
+//! // Unknown magic is an error, whatever the file might be called.
+//! assert!(detect(b"NOTGQODB").is_err());
+//! ```
+//!
+//! Writing and inspecting a native segment file:
+//!
+//! ```
+//! use gqodb_codec::{fixture, inspect, write_segment, Family, Format};
+//!
+//! let dir = std::env::temp_dir().join(format!("gqodb-codec-doctest-{}", std::process::id()));
+//! std::fs::create_dir_all(&dir).unwrap();
+//! let path = dir.join("demo.gqodb.ob");
+//! let _ = std::fs::remove_file(&path);
+//!
+//! write_segment(&path, &[fixture(Family::Orderbook).unwrap()]).unwrap();
+//! let report = inspect(&path, Some(Family::Orderbook)).unwrap();
+//! assert_eq!(report.format, Format::NativeSegmentV1);
+//! assert_eq!(report.rows, 3);
+//! assert!(report.fully_decoded);
+//! std::fs::remove_dir_all(&dir).unwrap();
+//! ```
+#![forbid(unsafe_code)]
 use anyhow::{Context, Result, bail, ensure};
 use arrow_array::{Array, ArrayRef, Int8Array, Int64Array, LargeStringArray, RecordBatch};
 use arrow_schema::{DataType, Field, Schema};

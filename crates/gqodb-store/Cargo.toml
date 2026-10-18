@@ -6,7 +6,11 @@ rust-version.workspace = true
 publish.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Experimental indexed order-book segments and prefix recovery"
+description = "Experimental indexed order-book segment files (.gqodb.ob) with range reads and committed-prefix recovery (0.x preview)"
+readme = "README.md"
+keywords = ["order-book", "market-data", "storage", "arrow", "recovery"]
+categories = ["database-implementations", "encoding"]
+documentation = "https://docs.rs/gqodb-store"
 
 [dependencies]
 anyhow = "1"
@@ -15,7 +19,7 @@ arrow-schema = { version = "=59.3.0", features = ["serde"] }
 arrow-select = "=59.3.0"
 bytes = "1"
 crc32fast = "1.5"
-gqodb-blocks = { path = "../gqodb-blocks" }
+gqodb-blocks = { version = "0.1.0", path = "../gqodb-blocks" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 

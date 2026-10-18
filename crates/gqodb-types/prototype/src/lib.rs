@@ -1,4 +1,44 @@
-//! Protocol-independent, exact L2 events. Times use one normalized local clock.
+//! Protocol-independent, exact L2 order-book events and clock-evidence timing types.
+//!
+//! This is a 0.x preview crate: no stability promise, breaking changes are possible
+//! (see `docs/API_STABILITY.md` in the repository). Prices and quantities are
+//! integers with explicit decimal scales in the [`Envelope`]; nothing is rounded.
+//! All times in the book types are `i64` nanoseconds on one normalized local clock.
+//!
+//! The [`timing`] module holds the separate clock-evidence types: it describes how
+//! well a timestamp is known and never reads a clock itself.
+//!
+//! # Example
+//!
+//! Build a small full-depth snapshot event. A price of `10_050` with
+//! `price_decimals = 2` is 100.50; the integer is what is stored.
+//!
+//! ```
+//! use gqodb_types::{
+//!     BookEvent, BookId, DepthCoverage, Envelope, EventKind, Level, Side,
+//! };
+//!
+//! let event = BookEvent {
+//!     envelope: Envelope {
+//!         book: BookId { venue: 1, instrument: 7, stream: 1 },
+//!         epoch: 1,
+//!         ordinal: 0,
+//!         transport_sequence: None,
+//!         application_sequence: None,
+//!         source_time: None,
+//!         received_at: 1_000,
+//!         available_at: 1_050,
+//!         price_decimals: 2,
+//!         quantity_decimals: 0,
+//!     },
+//!     event: EventKind::Snapshot {
+//!         levels: vec![Level { side: Side::Bid, price: 10_050, quantity: 3 }],
+//!         coverage: DepthCoverage::FULL,
+//!     },
+//! };
+//! assert_eq!(event.clone(), event);
+//! assert!(event.envelope.available_at >= event.envelope.received_at);
+//! ```
 #![forbid(unsafe_code)]
 use serde::{Deserialize, Serialize};
 

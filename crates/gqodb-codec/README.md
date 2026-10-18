@@ -1,5 +1,10 @@
 # gqodb-codec — checked native codec dispatch
 
+> **0.1.0 preview.** Checked native format detection, inspection and validation for GQODB tick and order-book files. No stability promise: APIs, command-line tools and file
+> formats may change in any 0.x release (see [API stability](https://github.com/GerritsenQuantOffices/GQODB/blob/main/docs/API_STABILITY.md)).
+> Part of the [GQODB open layer](https://github.com/GerritsenQuantOffices/GQODB/blob/main/README.md); evidence and benchmark bounds are in
+> the repository README.
+
 Working safe-Rust facade over the existing specialized codecs and indexed store.
 It selects decoders from native magic/header codec IDs, checks versions and
 expansion bounds, and preserves exact Arrow schema, metadata, values and nulls.

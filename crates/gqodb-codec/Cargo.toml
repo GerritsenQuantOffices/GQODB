@@ -6,14 +6,20 @@ rust-version.workspace = true
 publish.workspace = true
 license.workspace = true
 repository.workspace = true
+description = "Checked native format detection, inspection and validation for GQODB tick and order-book files (0.x preview)"
+readme = "README.md"
+keywords = ["market-data", "codec", "arrow", "validation", "order-book"]
+categories = ["encoding", "parser-implementations", "command-line-utilities"]
+documentation = "https://docs.rs/gqodb-codec"
+
 [dependencies]
 anyhow = "1"
 arrow-array = "=59.3.0"
 arrow-schema = { version = "=59.3.0", features = ["serde"] }
 bytes = "1"
 crc32fast = "1.5"
-gqodb-blocks = { path = "../gqodb-blocks" }
-gqodb-store = { path = "../gqodb-store" }
+gqodb-blocks = { version = "0.1.0", path = "../gqodb-blocks" }
+gqodb-store = { version = "0.1.0", path = "../gqodb-store" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.10"

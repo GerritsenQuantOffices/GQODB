@@ -1,5 +1,44 @@
 //! Shared timing for ticks, books and other events. No clock reads or host I/O.
 //!
+//! # Example
+//!
+//! Qualify one UTC reading with a persisted clock-state observation. The result is
+//! an *estimated* interval under the caller's stated error model, not a physical
+//! bound; the raw UTC value is never altered.
+//!
+//! ```
+//! use gqodb_types::timing::{
+//!     AssessedTime, ClockDomain, ClockReading, ClockState, TimeQuality,
+//! };
+//!
+//! let domain = ClockDomain { session_id: [1; 16], epoch: 1 };
+//! let state = ClockState {
+//!     domain,
+//!     id: 42,
+//!     collection_started_mono_ns: 1_000_000_000,
+//!     published_mono_ns: 1_100_000_000,
+//!     valid_until_mono_ns: 6_000_000_000,
+//!     synchronized: true,
+//!     base_error_ns: 20_000,
+//!     growth_allowance_ppb: Some(1000),
+//! };
+//! let reading = ClockReading {
+//!     domain,
+//!     utc_ns: 1_788_868_800_123_456_789,
+//!     monotonic_ns: 2_000_000_001,
+//!     read_span_ns: 50,
+//! };
+//! let assessed = AssessedTime::assess(reading, Some(&state)).unwrap();
+//! assert_eq!(assessed.quality(), TimeQuality::Estimated);
+//! assert_eq!(assessed.reading(), reading);
+//! assert_eq!(assessed.error_estimate_ns(), Some(21_051));
+//!
+//! // Without evidence the time is kept, but no interval is invented.
+//! let unqualified = AssessedTime::assess(reading, None).unwrap();
+//! assert_eq!(unqualified.quality(), TimeQuality::MissingEvidence);
+//! assert!(unqualified.interval().is_none());
+//! ```
+//!
 //! Inputs are descriptions, not authenticated evidence. The caller must obtain
 //! them from its trusted clock provider. Validated outputs only implement
 //! Serialize: importing them requires reconstructing and checking their inputs.

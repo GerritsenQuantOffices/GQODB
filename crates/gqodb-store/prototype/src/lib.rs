@@ -1,4 +1,47 @@
-//! Experimental .gqodb.ob segments. Independent of ingestion, bus and replay.
+//! Experimental indexed `.gqodb.ob` segment files. Independent of ingestion, bus and replay.
+//!
+//! This is a 0.x preview crate: the container format is experimental and carries no
+//! compatibility promise (see `docs/API_STABILITY.md` in the repository).
+//! A [`Writer`] creates a new file only (it never overwrites), appends complete Arrow
+//! batches and writes the block index on `finish`. A [`Reader`] opens the index
+//! without decompressing data blocks, answers inclusive time-range queries per
+//! symbol, and [`Reader::recover`] reads the complete valid prefix of an unfinished
+//! file without modifying it. Checksums detect damage; they do not authenticate.
+//!
+//! # Example
+//!
+//! ```
+//! use arrow_array::{ArrayRef, Int64Array, LargeStringArray, RecordBatch};
+//! use gqodb_store::{Reader, Writer};
+//! use std::sync::Arc;
+//!
+//! let batch = RecordBatch::try_from_iter(vec![
+//!     ("receipt_ns", Arc::new(Int64Array::from(vec![10, 12, 11])) as ArrayRef),
+//!     ("symbol", Arc::new(LargeStringArray::from(vec!["AAA", "BBB", "AAA"])) as ArrayRef),
+//!     ("price", Arc::new(Int64Array::from(vec![100, 200, 101])) as ArrayRef),
+//! ])
+//! .unwrap();
+//!
+//! let dir = std::env::temp_dir().join(format!("gqodb-store-doctest-{}", std::process::id()));
+//! std::fs::create_dir_all(&dir).unwrap();
+//! let path = dir.join("demo.gqodb.ob");
+//! let _ = std::fs::remove_file(&path);
+//!
+//! let mut writer = Writer::create(&path, batch.schema(), "receipt_ns", "symbol").unwrap();
+//! writer.append(&batch).unwrap();
+//! writer.finish().unwrap();
+//! // An existing file is never overwritten.
+//! assert!(Writer::create(&path, batch.schema(), "receipt_ns", "symbol").is_err());
+//!
+//! let mut reader = Reader::open(&path).unwrap();
+//! let all = reader.read_all().unwrap();
+//! assert_eq!(all[0].num_rows(), 3);
+//!
+//! // Inclusive range, original row order preserved: both AAA rows.
+//! let hits = reader.query("AAA", 10, 11).unwrap();
+//! assert_eq!(hits.batches.iter().map(|b| b.num_rows()).sum::<usize>(), 2);
+//! std::fs::remove_dir_all(&dir).unwrap();
+//! ```
 #![forbid(unsafe_code)]
 
 use anyhow::{Context, Result, ensure};
