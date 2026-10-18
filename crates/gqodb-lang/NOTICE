@@ -1,0 +1,9 @@
+GQODB open layer
+Copyright 2026 Thomas Gerritsen / Gerritsen Quant Offices
+
+This product includes software developed by Gerritsen Quant Offices,
+licensed under the Apache License, Version 2.0 (see LICENSE).
+
+The GQODB engine — raw journal, ledger and receipts, recovery, quality,
+features, causal query, ops and connectors — is not part of this
+repository and is not licensed by it.

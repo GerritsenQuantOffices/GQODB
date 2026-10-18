@@ -1,0 +1,37 @@
+[package]
+name = "gqodb-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "The gqodb command: runs the GQODB command language over native tick and order-book files (0.x preview)"
+readme = "README.md"
+keywords = ["market-data", "command-line", "query-language", "order-book", "finance"]
+categories = ["command-line-utilities", "database-implementations"]
+documentation = "https://docs.rs/gqodb-cli"
+
+[dependencies]
+anyhow = "1"
+arrow-array = "=59.3.0"
+arrow-schema = { version = "=59.3.0", features = ["serde"] }
+gqodb-codec = { version = "0.1.0", path = "../gqodb-codec" }
+gqodb-lang = { version = "0.1.0", path = "../gqodb-lang" }
+gqodb-store = { version = "0.1.0", path = "../gqodb-store" }
+
+[lib]
+name = "gqodb_cli"
+path = "prototype/src/lib.rs"
+
+[[bin]]
+name = "gqodb"
+path = "prototype/src/main.rs"
+
+[[test]]
+name = "exec"
+path = "prototype/tests/exec.rs"
+
+[[test]]
+name = "cli"
+path = "prototype/tests/cli.rs"

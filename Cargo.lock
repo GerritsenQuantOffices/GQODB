@@ -414,6 +414,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "gqodb-cli"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "arrow-array",
+ "arrow-schema",
+ "gqodb-codec",
+ "gqodb-lang",
+ "gqodb-store",
+]
+
+[[package]]
 name = "gqodb-codec"
 version = "0.1.0"
 dependencies = [
@@ -428,6 +440,10 @@ dependencies = [
  "serde_json",
  "sha2",
 ]
+
+[[package]]
+name = "gqodb-lang"
+version = "0.1.0"
 
 [[package]]
 name = "gqodb-store"

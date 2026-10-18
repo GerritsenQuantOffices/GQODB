@@ -1,0 +1,40 @@
+[package]
+name = "gqodb-lang"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "The GQODB command language: lexer, parser, diagnostics and planner for `show` queries over native tick and order-book files (0.x preview)"
+readme = "README.md"
+keywords = ["market-data", "query-language", "parser", "command-line", "finance"]
+categories = ["parser-implementations", "command-line-utilities"]
+documentation = "https://docs.rs/gqodb-lang"
+
+[lib]
+path = "prototype/src/lib.rs"
+
+[[test]]
+name = "lexer"
+path = "prototype/tests/lexer.rs"
+
+[[test]]
+name = "parser"
+path = "prototype/tests/parser.rs"
+
+[[test]]
+name = "plan"
+path = "prototype/tests/plan.rs"
+
+[[test]]
+name = "golden"
+path = "prototype/tests/golden.rs"
+
+[[test]]
+name = "roundtrip"
+path = "prototype/tests/roundtrip.rs"
+
+[[test]]
+name = "time"
+path = "prototype/tests/time.rs"

@@ -4,6 +4,8 @@ members = [
     "crates/gqodb-blocks",
     "crates/gqodb-store",
     "crates/gqodb-codec",
+    "crates/gqodb-lang",
+    "crates/gqodb-cli",
 ]
 resolver = "2"
 
