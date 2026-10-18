@@ -112,7 +112,7 @@ results. B06 and B12 have no receipts and are marked as historical.
 
 ## Build it
 
-To build, test and install the two open command-line tools from a clean checkout:
+To build, test and install the open command-line tools from a clean checkout:
 
 ```sh
 ./install.sh --prefix "$HOME/.local"

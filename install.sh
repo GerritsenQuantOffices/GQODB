@@ -1,5 +1,5 @@
 #!/bin/sh
-# Build, test and install the two open GQODB command-line tools from source.
+# Build, test and install the open GQODB command-line tools from source.
 # Prerequisite installation requires explicit consent. The engine is not included.
 set -eu
 
