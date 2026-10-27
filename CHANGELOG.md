@@ -7,6 +7,19 @@ convention: a change that is not backwards-compatible bumps the minor version, a
 
 ## [Unreleased]
 
+### Fixed
+
+- Windows: the B17 benchmark helper `fsync_tree` (shared by the `trades_candidate` and
+  `trades_convert` examples) opened files read-only before `sync_all`, which fails with
+  `Access is denied` on Windows (`FlushFileBuffers` needs write access), and opened directories
+  as plain files, which Windows does not allow. Files are now opened for writing on Windows
+  (no create, no truncate); the Linux and macOS code path is unchanged. On Windows the directory
+  steps only check that the directory exists: directory entries are not flushed explicitly, so
+  durability there is file contents only plus whatever the file system journals by itself. New
+  test `fsync_tree_keeps_contents_and_rejects_missing_paths`. Checked on Linux (Rust 1.85.0 and
+  1.96.0) and type-checked and linted for `x86_64-pc-windows-gnu`; the Windows tests themselves
+  have not been run yet, and the Windows CI entry stays `continue-on-error`.
+
 ## [0.1.0] - 2026-10-18
 
 First public preview, source only. Released on 2026-10-18 as a GitHub pre-release (tag `v0.1.0`,

@@ -424,8 +424,53 @@ fn walk(dir: &Path, files: &mut Vec<PathBuf>, dirs: &mut Vec<PathBuf>) -> std::i
     Ok(())
 }
 
+/// Flush one regular file to stable storage.
+///
+/// Unix: a read-only handle is enough for `fsync`. Windows: `sync_all` is
+/// `FlushFileBuffers`, which needs a handle with write access, so the file is opened for
+/// writing (no create, no truncate: the contents are untouched).
+fn fsync_file(path: &Path) -> std::io::Result<()> {
+    #[cfg(windows)]
+    let file = fs::OpenOptions::new().write(true).open(path)?;
+    #[cfg(not(windows))]
+    let file = File::open(path)?;
+    file.sync_all()
+}
+
+/// Flush one directory entry table to stable storage.
+///
+/// Unix: `fsync` on a read-only directory handle, which is what makes a newly created or
+/// renamed entry durable. Windows: there is no equivalent through the standard library;
+/// a directory cannot be opened as a plain file (`Access is denied`) and Windows does not
+/// offer a documented way to flush a directory handle. The Windows build therefore flushes
+/// the file contents only; directory entries rely on the file system's own metadata
+/// journalling (NTFS), for which this function gives no guarantee. It still fails if the
+/// path is not an existing directory, so a wrong path is not silently accepted.
+fn fsync_dir(path: &Path) -> std::io::Result<()> {
+    #[cfg(windows)]
+    {
+        let meta = fs::metadata(path)?;
+        if !meta.is_dir() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::NotADirectory,
+                "fsync_dir: not a directory",
+            ));
+        }
+        Ok(())
+    }
+    #[cfg(not(windows))]
+    {
+        File::open(path)?.sync_all()
+    }
+}
+
 /// Protocol section 5: fsync every regular file, then every directory bottom-up, then
 /// the parent of the output root. Works for a single file as well as for a directory.
+///
+/// Durability differs by platform. On Linux and macOS this is the full procedure above.
+/// On Windows only the file contents are flushed (see [`fsync_dir`]): the directory steps
+/// check that the path exists but do not flush, so a Windows run is not comparable with a
+/// Unix run on the "directories have been fsynced" part of the protocol.
 pub fn fsync_tree(root: &Path) -> std::io::Result<()> {
     let mut files = Vec::new();
     let mut dirs = Vec::new();
@@ -435,11 +480,11 @@ pub fn fsync_tree(root: &Path) -> std::io::Result<()> {
         files.push(root.to_path_buf());
     }
     for file in &files {
-        File::open(file)?.sync_all()?;
+        fsync_file(file)?;
     }
     dirs.sort_by_key(|d| std::cmp::Reverse(d.components().count()));
     for dir in &dirs {
-        File::open(dir)?.sync_all()?;
+        fsync_dir(dir)?;
     }
     if let Some(parent) = root.parent() {
         let parent = if parent.as_os_str().is_empty() {
@@ -447,7 +492,7 @@ pub fn fsync_tree(root: &Path) -> std::io::Result<()> {
         } else {
             parent
         };
-        File::open(parent)?.sync_all()?;
+        fsync_dir(parent)?;
     }
     Ok(())
 }
@@ -730,6 +775,23 @@ mod tests {
         fs::write(root.join("a/b/f"), b"x")?;
         fsync_tree(&root)?;
         fsync_tree(&root.join("a/b/f"))?;
+        fs::remove_dir_all(&root)?;
+        Ok(())
+    }
+
+    /// Syncing must not touch the contents, and wrong paths must still be errors on every
+    /// platform (the Windows directory step is a check, not a flush).
+    #[test]
+    fn fsync_tree_keeps_contents_and_rejects_missing_paths() -> Result<()> {
+        let root = std::env::temp_dir().join(format!("b17-fsync-keep-{}", std::process::id()));
+        fs::create_dir_all(root.join("d"))?;
+        fs::write(root.join("d/f1"), b"payload-1")?;
+        fs::write(root.join("f2"), b"")?;
+        fsync_tree(&root)?;
+        assert_eq!(fs::read(root.join("d/f1"))?, b"payload-1");
+        assert_eq!(fs::read(root.join("f2"))?, b"");
+        assert!(fsync_tree(&root.join("missing")).is_err());
+        assert!(fsync_dir(&root.join("missing")).is_err());
         fs::remove_dir_all(&root)?;
         Ok(())
     }
